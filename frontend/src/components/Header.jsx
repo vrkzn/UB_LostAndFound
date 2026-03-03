@@ -12,8 +12,9 @@ export default function Header({ applicantType }) {
         ${headerColor}
         sticky top-0 z-50
         shadow-md
-        border-b border-gray-300
         transition-all duration-300
+        border-b-2
+        ${isAdmin ? "border-gray-600" : "border-gray-300"}
       `}
     >
 
