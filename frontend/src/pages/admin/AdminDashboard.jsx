@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "../../api/axios";
-import { FileWarning, CheckCircle, Archive, Trash2 } from "lucide-react";
+import { FileWarning, CheckCircle, Archive, Search } from "lucide-react";
+
+/*
+=====================================================
+ PREMIUM ADMIN DASHBOARD UI
+=====================================================
+*/
 
 export default function AdminDashboard() {
 
@@ -12,11 +18,14 @@ export default function AdminDashboard() {
 
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState("found");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  /*
+  =====================================================
+  FETCH DASHBOARD DATA
+  =====================================================
+  */
 
   const fetchDashboard = async () => {
     try {
@@ -29,7 +38,16 @@ export default function AdminDashboard() {
         totalUnclaimed: 0
       });
 
-      setItems(res.data.items || []);
+      let fetchedItems = res.data.items || [];
+
+      // Sort newest → oldest
+      fetchedItems.sort(
+        (a, b) =>
+          new Date(b.created_at || 0) -
+          new Date(a.created_at || 0)
+      );
+
+      setItems(fetchedItems);
 
     } catch (err) {
       console.error(err);
@@ -37,6 +55,12 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  /*
+  =====================================================
+  ACTION HANDLER
+  =====================================================
+  */
 
   const handleAction = async (id, action) => {
     try {
@@ -47,249 +71,332 @@ export default function AdminDashboard() {
     }
   };
 
-  /* ===== Skeleton Loaders ===== */
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
 
-  const StatPlaceholder = () => (
-    <div className="bg-white rounded-2xl shadow p-6 animate-pulse">
-      <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-      <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-    </div>
-  );
+  /*
+  =====================================================
+  FILTER LOGIC
+  =====================================================
+  */
 
-  const TablePlaceholder = () => (
-    <tr className="border-b animate-pulse">
-      <td className="p-3"><div className="w-14 h-14 bg-gray-200 rounded-lg"></div></td>
-      <td className="p-3"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
-      <td className="p-3"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
-      <td className="p-3"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
-      <td className="p-3"><div className="h-6 bg-gray-200 rounded w-24"></div></td>
-    </tr>
-  );
+  const filteredItems = useMemo(() => {
+    return items.filter(item =>
+      item.item_type === activeTab &&
+      item.item_name?.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [items, activeTab, search]);
+
+  /*
+  =====================================================
+  LOADING STATE
+  =====================================================
+  */
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6 bg-gray-50 min-h-screen">
+      <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        <div className="animate-pulse space-y-6">
 
-        <h1 className="text-3xl font-bold text-gray-800">
-          Dashboard Overview
-        </h1>
+          <div className="h-10 w-64 bg-gray-200 rounded-xl"></div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {[1,2,3].map(i => <StatPlaceholder key={i}/>)}
+          <div className="grid md:grid-cols-3 gap-6">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>
+            ))}
+          </div>
+
         </div>
-
-        <div className="bg-white rounded-2xl shadow p-6 space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-48"></div>
-
-          <table className="w-full text-sm">
-            <tbody>
-              {[1,2,3,4].map(i => <TablePlaceholder key={i}/>)}
-            </tbody>
-          </table>
-        </div>
-
       </div>
     );
   }
 
-  const filteredItems = items.filter(
-    item => item.item_type === activeTab
-  );
+  /*
+  =====================================================
+  MAIN UI
+  =====================================================
+  */
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen space-y-8">
+    <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 space-y-8">
 
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
+      {/* HEADER */}
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
           Dashboard Overview
         </h1>
-        <p className="text-gray-500 mt-1">
-          Lost and Found Management System
+
+        <p className="text-gray-500 text-sm max-w-xl leading-relaxed">
+          Lost and Found Management System Administration Panel
         </p>
       </div>
 
-      {/* Statistic Cards */}
+      {/* STATS GRID */}
       <div className="grid md:grid-cols-3 gap-6">
 
-        <div className="bg-white rounded-2xl shadow p-6 flex gap-5 items-center hover:shadow-lg transition">
-          <div className="p-4 bg-red-100 text-red-600 rounded-xl">
-            <FileWarning size={22}/>
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">Total Lost Reports</p>
-            <h2 className="text-3xl font-bold text-gray-800">
-              {stats.totalLost}
-            </h2>
-          </div>
-        </div>
+        <StatCard
+          title="Total Lost Reports"
+          value={stats.totalLost}
+          icon={<FileWarning/>}
+          color="from-red-50 to-red-100 text-red-600"
+        />
 
-        <div className="bg-white rounded-2xl shadow p-6 flex gap-5 items-center hover:shadow-lg transition">
-          <div className="p-4 bg-green-100 text-green-600 rounded-xl">
-            <CheckCircle size={22}/>
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">Total Found Reports</p>
-            <h2 className="text-3xl font-bold text-gray-800">
-              {stats.totalFound}
-            </h2>
-          </div>
-        </div>
+        <StatCard
+          title="Total Found Reports"
+          value={stats.totalFound}
+          icon={<CheckCircle/>}
+          color="from-green-50 to-green-100 text-green-600"
+        />
 
-        <div className="bg-white rounded-2xl shadow p-6 flex gap-5 items-center hover:shadow-lg transition">
-          <div className="p-4 bg-blue-100 text-blue-600 rounded-xl">
-            <Archive size={22}/>
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">Unclaimed Items</p>
-            <h2 className="text-3xl font-bold text-gray-800">
-              {stats.totalUnclaimed}
-            </h2>
-          </div>
-        </div>
+        <StatCard
+          title="Unclaimed Items"
+          value={stats.totalUnclaimed}
+          icon={<Archive/>}
+          color="from-blue-50 to-blue-100 text-blue-600"
+        />
 
       </div>
 
-      {/* Uploads Management Section */}
-      <div className="bg-white rounded-2xl shadow p-6 space-y-6">
+      {/* MANAGEMENT PANEL */}
+      <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-8 space-y-6">
 
-        <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-          <Archive size={20}/>
-          Reports Management
-        </h2>
+        {/* TITLE + SEARCH */}
+        <div className="flex flex-wrap justify-between gap-4 items-center">
 
-        {/* Tabs */}
-        <div className="flex gap-6 border-b">
+          <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+            <Archive size={20}/>
+            Reports Management
+          </h2>
 
-          <button
+          <SearchBar search={search} setSearch={setSearch}/>
+        </div>
+
+        {/* TABS */}
+        <div className="flex gap-8 border-b text-sm font-medium">
+
+          <TabButton
+            label="Found Items"
+            active={activeTab === "found"}
             onClick={() => setActiveTab("found")}
-            className={`pb-3 border-b-2 text-sm font-medium transition
-              ${activeTab === "found"
-                ? "border-green-600 text-green-600"
-                : "border-transparent text-gray-500 hover:text-green-600"
-              }`}
-          >
-            Found Items
-          </button>
+            activeColor="border-green-600 text-green-600"
+          />
 
-          <button
+          <TabButton
+            label="Lost Items"
+            active={activeTab === "lost"}
             onClick={() => setActiveTab("lost")}
-            className={`pb-3 border-b-2 text-sm font-medium transition
-              ${activeTab === "lost"
-                ? "border-red-600 text-red-600"
-                : "border-transparent text-gray-500 hover:text-red-600"
-              }`}
-          >
-            Lost Items
-          </button>
+            activeColor="border-red-600 text-red-600"
+          />
 
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto border rounded-xl">
-
-          <table className="w-full text-sm">
-
-            <thead className="bg-gray-100 text-xs uppercase text-gray-600">
-              <tr>
-                <th className="p-4 text-left">Image</th>
-                <th className="p-4 text-left">Item Name</th>
-                <th className="p-4 text-left">Type</th>
-                <th className="p-4 text-left">Status</th>
-                <th className="p-4 text-left">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {filteredItems.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">
-                    No items found
-                  </td>
-                </tr>
-              )}
-
-              {filteredItems.map(item => (
-
-                <tr key={item.id}
-                    className="border-b hover:bg-gray-50 transition">
-
-                  <td className="p-4">
-                    <img
-                      src={item.image_path || "/placeholder.png"}
-                      className="w-14 h-14 object-cover rounded-xl border"
-                    />
-                  </td>
-
-                  <td className="p-4 font-medium">
-                    {item.item_name}
-                  </td>
-
-                  <td className="p-4 capitalize text-gray-600">
-                    {item.item_type || "N/A"}
-                  </td>
-
-                  <td className="p-4">
-                    <span className={`px-3 py-1 text-xs rounded-full font-semibold
-                      ${
-                        item.status === "approved"
-                          ? "bg-green-100 text-green-700"
-                          : item.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : item.status === "claimed"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-600"
-                      }
-                    `}>
-                      {item.status || "unknown"}
-                    </span>
-                  </td>
-
-                  <td className="p-4 flex gap-2 flex-wrap">
-
-                    {item.status === "pending" && (
-                      <button
-                        onClick={() => handleAction(item.id,"verify")}
-                        className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-1"
-                      >
-                        <CheckCircle size={14}/>
-                        Verify
-                      </button>
-                    )}
-
-                    {item.status !== "claimed" && (
-                      <button
-                        onClick={() => handleAction(item.id,"claimed")}
-                        className="px-3 py-1 text-xs border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition flex items-center gap-1"
-                      >
-                        <Archive size={14}/>
-                        Claim
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleAction(item.id,"delete")}
-                      className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-1"
-                    >
-                      <Trash2 size={14}/>
-                      Delete
-                    </button>
-
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
+        {/* TABLE */}
+        <TableView
+          items={filteredItems}
+          handleAction={handleAction}
+        />
 
       </div>
-
     </div>
   );
 }
+
+/*
+=====================================================
+ COMPONENTS
+=====================================================
+*/
+
+const StatCard = ({ title, value, icon, color }) => (
+  <div className={`
+    bg-gradient-to-br ${color}
+    rounded-2xl p-7
+    shadow-md hover:-translate-y-1 transition duration-300
+  `}>
+    <p className="text-sm text-gray-500 flex items-center gap-2">
+      {icon}
+      {title}
+    </p>
+
+    <h3 className="text-4xl font-bold mt-3">
+      {value}
+    </h3>
+  </div>
+);
+
+const SearchBar = ({ search, setSearch }) => (
+  <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 w-full md:w-80 focus-within:ring-2 focus-within:ring-blue-400/30 transition">
+    <Search size={18} className="text-gray-400"/>
+    <input
+      placeholder="Search reports..."
+      value={search}
+      onChange={e => setSearch(e.target.value)}
+      className="bg-transparent outline-none text-sm w-full"
+    />
+  </div>
+);
+
+const TabButton = ({ label, active, onClick, activeColor }) => (
+  <button
+    onClick={onClick}
+    className={`
+      pb-3 border-b-2 transition-all duration-200
+      ${active ? activeColor : "border-transparent text-gray-500 hover:text-gray-700"}
+    `}
+  >
+    {label}
+  </button>
+);
+
+const TableView = ({ items, handleAction }) => (
+  <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+
+    <table className="w-full text-sm">
+
+      <thead className="bg-gray-50 text-gray-500 uppercase text-xs sticky top-0">
+        <tr>
+          <th className="p-4 text-left">Image</th>
+          <th className="p-4 text-left">Item Name</th>
+          <th className="p-4 text-left">Status</th>
+          <th className="p-4 text-left">Reported</th>
+          <th className="p-4 text-left">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {items.length === 0 && (
+          <tr>
+            <td colSpan={5} className="p-10 text-center text-gray-400">
+              <Archive size={40} className="mx-auto opacity-30"/>
+              <p className="mt-2">No reports found</p>
+            </td>
+          </tr>
+        )}
+
+        {items.map(item => {
+
+          /* ===============================
+             Date Formatting
+          =============================== */
+
+          const dateObj = item.created_at
+            ? new Date(item.created_at)
+            : null;
+
+          const formattedDate = dateObj
+            ? dateObj.toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric"
+              })
+            : "N/A";
+
+          const formattedTime = dateObj
+            ? dateObj.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit"
+              })
+            : "";
+
+          return (
+            <tr
+              key={item.id}
+              className="border-b border-gray-100 hover:bg-gray-50/80 transition"
+            >
+
+              {/* IMAGE */}
+              <td className="p-4">
+                <img
+                  src={item.image_path || "/placeholder.png"}
+                  className="w-14 h-14 object-cover rounded-xl border border-gray-200"
+                  alt={item.item_name}
+                />
+              </td>
+
+              {/* ITEM DETAILS */}
+              <td className="p-4 font-medium text-gray-800">
+
+                <div>{item.item_name}</div>
+
+              </td>
+
+              {/* STATUS */}
+              <td className="p-4">
+                <StatusBadge status={item.status}/>
+              </td>
+
+              {/* DATE + TIME */}
+              <td className="p-4 text-gray-500 text-xs leading-relaxed">
+
+                <div>{formattedDate}</div>
+
+                <div className="text-gray-300 text-[11px]">
+                  {formattedTime}
+                </div>
+
+              </td>
+
+              {/* ACTIONS */}
+              <td className="p-4 flex gap-2 flex-wrap">
+
+                {item.status === "pending" && (
+                  <ActionButton
+                    label="Verify"
+                    color="bg-green-600 text-white"
+                    onClick={() => handleAction(item.id,"verify")}
+                  />
+                )}
+
+                {item.status !== "claimed" && (
+                  <ActionButton
+                    label="Claim"
+                    color="border border-blue-600 text-blue-600"
+                    outline
+                    onClick={() => handleAction(item.id,"claimed")}
+                  />
+                )}
+
+                <ActionButton
+                  label="Delete"
+                  color="bg-red-600 text-white"
+                  onClick={() => handleAction(item.id,"delete")}
+                />
+
+              </td>
+
+            </tr>
+          );
+        })}
+
+      </tbody>
+    </table>
+  </div>
+);
+
+const StatusBadge = ({ status }) => {
+  const map = {
+    approved: "bg-green-100 text-green-700",
+    pending: "bg-yellow-100 text-yellow-700",
+    claimed: "bg-blue-100 text-blue-700"
+  };
+
+  return (
+    <span className={`px-3 py-1 text-xs rounded-full font-semibold ${map[status] || "bg-gray-100 text-gray-600"}`}>
+      {status || "unknown"}
+    </span>
+  );
+};
+
+const ActionButton = ({ label, color, onClick, outline }) => (
+  <button
+    onClick={onClick}
+    className={`
+      px-3 py-1 text-xs rounded-xl shadow-sm hover:shadow-md transition font-medium
+      ${outline ? color : color + " hover:opacity-90"}
+    `}
+  >
+    {label}
+  </button>
+);
