@@ -213,13 +213,13 @@ export default function LostItemPage() {
           {/* Claim To */}
           <div className="flex flex-col gap-2">
             <label className="font-medium text-gray-700">
-              Claim To <span className="text-red-600">*</span>
+              Surrender To <span className="text-red-600">*</span>
             </label>
             <input
               required
               value={claimTo}
               onChange={e => setClaimTo(e.target.value)}
-              placeholder="Person/where to claim the item"
+              placeholder="Person/where to surrender the item"
               className="p-3 border rounded-xl"
             />
           </div>

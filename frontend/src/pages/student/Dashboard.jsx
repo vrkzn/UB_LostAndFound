@@ -1,26 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import api from "../../api/axios";
 
 export default function LostAndFoundFrontend() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("found");
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const foundItems = [
-    { name: "Umbrella" },
-    { name: "Phone Charger" },
-    { name: "Notebook" },
-    { name: "Headset" },
-  ];
+  const fetchItems = async (type) => {
+    try {
 
-  const lostItems = [
-    { name: "Laptop" },
-    { name: "Black Wallet" },
-    { name: "Set of Keys" },
-    { name: "Water Bottle" },
-  ];
+        setLoading(true);
 
-  const displayItems = activeTab === "found" ? foundItems : lostItems;
+const res = await api.get(`/items/${type}`);
+
+        setItems(res.data);
+
+    } catch (err) {
+        console.error(err);
+    } finally {
+        setLoading(false);
+    }
+};
+
+useEffect(() => {
+    fetchItems(activeTab);
+}, [activeTab]);
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans flex flex-col">
@@ -99,25 +106,38 @@ export default function LostAndFoundFrontend() {
         </div>
 
         {/* Items Grid */}
-        <div className="px-6 pb-12 mt-5">
+<div className="px-6 pb-12 mt-5">
+    {loading && <p className="text-center text-gray-500">Loading items...</p>}
 
-          <div className="grid md:grid-cols-4 gap-6">
+    <div className="grid md:grid-cols-4 gap-6">
 
-            {displayItems.map((item, index) => (
-              <div
-                key={index}
+        {items.map((item) => (
+            <div
+                key={item.id}
                 className="bg-white p-5 rounded-2xl shadow-md flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition duration-300"
-              >
-                <div className="w-24 h-24 bg-gray-200 rounded-xl mb-4"></div>
+            >
 
-                <p className="font-medium text-gray-700">
-                  {item.name}
+<div className="w-full h-40 bg-gray-200 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+
+    {item.image_path && (
+        <img
+            src={`http://localhost:7002${item.image_path}`}
+            alt={item.item_name}
+            className="w-full h-full object-cover"
+        />
+    )}
+
+</div>
+
+                <p className="font-medium text-gray-700 text-center">
+                    {item.item_name}
                 </p>
-              </div>
-            ))}
 
-          </div>
-        </div>
+            </div>
+        ))}
+
+    </div>
+</div>
 
       </main>
 

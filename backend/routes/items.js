@@ -6,6 +6,7 @@ import db from "../db.js";
 import { fileURLToPath } from "url";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 
+
 const router = express.Router();
 
 /*
@@ -218,4 +219,86 @@ router.post(
         }
     }
 );
+
+
+/*
+====================================================
+ Get Items for Student Dashboard
+====================================================
+*/
+router.get("/:type", authenticateToken, async (req, res) => {
+
+    try {
+
+        const { type } = req.params;
+
+        if (!["found", "lost"].includes(type)) {
+            return res.status(400).json({
+                message: "Invalid type"
+            });
+        }
+
+        const table =
+            type === "found"
+                ? "FOUND_ITEMS"
+                : "LOST_ITEMS";
+
+        const imageTable =
+            type === "found"
+                ? "FOUND_ITEM_IMAGES"
+                : "LOST_ITEM_IMAGES";
+
+        const foreignKey =
+            type === "found"
+                ? "found_item_id"
+                : "lost_item_id";
+
+        const [rows] = await db.query(`
+            SELECT 
+                i.id,
+                i.item_name,
+                i.category,
+                i.description,
+                i.status,
+                i.created_at,
+
+                (
+                    SELECT image_path
+                    FROM ${imageTable}
+                    WHERE ${foreignKey} = i.id
+                    LIMIT 1
+                ) AS image_path
+
+            FROM ${table} i
+            WHERE i.status = 'approved'
+            ORDER BY i.created_at DESC
+        `);
+
+        res.json(rows);
+
+    } catch (error) {
+
+        console.error("Fetch Items Error:", error);
+
+        res.status(500).json({
+            message: "Server error"
+        });
+    }
+});
+
+// router.get("/found", authenticateToken, async (req, res) => {
+//   const [rows] = await db.query(`
+//     SELECT * FROM FOUND_ITEMS ORDER BY created_at DESC
+//   `);
+
+//   res.json(rows);
+// });
+
+// router.get("/lost", authenticateToken, async (req, res) => {
+//   const [rows] = await db.query(`
+//     SELECT * FROM LOST_ITEMS ORDER BY created_at DESC
+//   `);
+
+//   res.json(rows);
+// });
 export default router;
