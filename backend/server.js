@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+
 import authRouter from "./routes/auth.js";
 import itemsRouter from "./routes/items.js";
 import adminRouter from "./routes/admin.js";
@@ -15,6 +17,20 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+/*
+=====================================
+SERVE UPLOADS
+=====================================
+*/
+
+app.use("/uploads", express.static(path.resolve("uploads")));
+
+/*
+=====================================
+ROUTES
+=====================================
+*/
 
 app.use("/api/auth", authRouter);
 app.use("/api/items", itemsRouter);

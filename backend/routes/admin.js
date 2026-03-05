@@ -31,32 +31,48 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
     /*
     =====================================================
-    FETCH ITEMS (SIMPLE AND FAST ⭐)
+    FETCH FOUND ITEMS
     =====================================================
     */
 
     const [foundItems] = await db.query(`
-      SELECT
-        id,
-        item_name,
-        status,
-        created_at,
-        CONCAT('/uploads/found_items/', image_path) AS image_path,
-        'found' AS item_type
-      FROM FOUND_ITEMS
-      ORDER BY created_at DESC
+SELECT
+  f.id,
+  f.item_name,
+  f.status,
+  f.created_at,
+  (
+    SELECT image_path
+    FROM FOUND_ITEM_IMAGES
+    WHERE found_item_id = f.id
+    LIMIT 1
+  ) AS image_path,
+  'found' AS item_type
+FROM FOUND_ITEMS f
+ORDER BY f.created_at DESC
     `);
 
+    /*
+    =====================================================
+    FETCH LOST ITEMS
+    =====================================================
+    */
+
     const [lostItems] = await db.query(`
-      SELECT
-        id,
-        item_name,
-        status,
-        created_at,
-        CONCAT('/uploads/lost_items/', image_path) AS image_path,
-        'lost' AS item_type
-      FROM LOST_ITEMS
-      ORDER BY created_at DESC
+SELECT
+  l.id,
+  l.item_name,
+  l.status,
+  l.created_at,
+  (
+    SELECT image_path
+    FROM LOST_ITEM_IMAGES
+    WHERE lost_item_id = l.id
+    LIMIT 1
+  ) AS image_path,
+  'lost' AS item_type
+FROM LOST_ITEMS l
+ORDER BY l.created_at DESC
     `);
 
     res.json({
@@ -76,47 +92,86 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
   }
 });
 
+
 // --------------------------------------------------
 // ADMIN ACTIONS (Verify, Claim, Delete)
 // --------------------------------------------------
-router.post("/admin/items/:id/:action", authenticateToken, async (req, res) => {
-    try {
-        const { id, action } = req.params;
 
-        if (action === "verify") {
-            // Update found item status to approved
-            await db.query(
-                `UPDATE FOUND_ITEMS SET status='approved' WHERE id=?`,
-                [id]
-            );
+router.post("/items/:id/:action", authenticateToken, async (req, res) => {
+  try {
 
-        } else if (action === "claimed") {
-            // Update found item status to claimed
-            await db.query(
-                `UPDATE FOUND_ITEMS SET status='claimed' WHERE id=?`,
-                [id]
-            );
+    const { id, action } = req.params;
 
-        } else if (action === "delete") {
-            // Delete the item from the database (found items)
-            await db.query(
-                `DELETE FROM FOUND_ITEMS WHERE id=?`,
-                [id]
-            );
-        }
+    /*
+    =========================================
+    VERIFY TOGGLE
+    =========================================
+    */
 
-        res.json({
-            message: "Action completed successfully"
-        });
+    if (action === "verify") {
 
-    } catch (error) {
+      const [[item]] = await db.query(
+        "SELECT status FROM FOUND_ITEMS WHERE id=?",
+        [id]
+      );
 
-        console.error("Admin Action Error:", error);
+      const newStatus =
+        item.status === "approved" ? "pending" : "approved";
 
-        res.status(500).json({
-            message: "Action processing failed"
-        });
+      await db.query(
+        "UPDATE FOUND_ITEMS SET status=? WHERE id=?",
+        [newStatus, id]
+      );
     }
-});
 
+    /*
+    =========================================
+    CLAIM TOGGLE
+    =========================================
+    */
+
+    else if (action === "claimed") {
+
+      const [[item]] = await db.query(
+        "SELECT status FROM FOUND_ITEMS WHERE id=?",
+        [id]
+      );
+
+      const newStatus =
+        item.status === "claimed"
+          ? "approved"   // or pending depending on your workflow
+          : "claimed";
+
+      await db.query(
+        "UPDATE FOUND_ITEMS SET status=? WHERE id=?",
+        [newStatus, id]
+      );
+    }
+
+    /*
+    =========================================
+    DELETE
+    =========================================
+    */
+
+    else if (action === "delete") {
+
+      await db.query(
+        "DELETE FROM FOUND_ITEMS WHERE id=?",
+        [id]
+      );
+    }
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false
+    });
+  }
+});
 export default router;

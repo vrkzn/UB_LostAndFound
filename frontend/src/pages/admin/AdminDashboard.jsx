@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import api from "../../api/axios";
 import { FileWarning, CheckCircle, Archive, Search } from "lucide-react";
 
+
 /*
 =====================================================
  PREMIUM ADMIN DASHBOARD UI
@@ -40,7 +41,6 @@ export default function AdminDashboard() {
 
       let fetchedItems = res.data.items || [];
 
-      // Sort newest → oldest
       fetchedItems.sort(
         (a, b) =>
           new Date(b.created_at || 0) -
@@ -62,14 +62,50 @@ export default function AdminDashboard() {
   =====================================================
   */
 
-  const handleAction = async (id, action) => {
-    try {
-      await api.post(`/admin/items/${id}/${action}`);
-      fetchDashboard();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+const handleAction = async (id, action, currentStatus) => {
+
+  let promptMessage = "";
+
+  if (action === "verify") {
+    promptMessage = currentStatus === "approved"
+      ? "Are you sure you want to unverify this report?"
+      : "Are you sure you want to verify this report?";
+  }
+
+  else if (action === "claimed") {
+    promptMessage = currentStatus === "claimed"
+      ? "Are you sure you want to mark this item as unclaimed?"
+      : "Are you sure you want to mark this item as claimed?";
+  }
+
+  else if (action === "delete") {
+    promptMessage = "Are you sure you want to permanently delete this report?";
+  }
+
+  if (!window.confirm(promptMessage)) return;
+
+  try {
+    await api.post(`/admin/items/${id}/${action}`);
+
+    alert(
+      action === "verify"
+        ? (currentStatus === "approved"
+            ? "Report unverified successfully."
+            : "Report verified successfully.")
+      : action === "claimed"
+        ? (currentStatus === "claimed"
+            ? "Item marked as unclaimed."
+            : "Item marked as claimed.")
+      : "Report deleted successfully."
+    );
+
+    fetchDashboard();
+
+  } catch (err) {
+    console.error(err);
+    alert("Action failed. Please try again.");
+  }
+};
 
   useEffect(() => {
     fetchDashboard();
@@ -88,35 +124,20 @@ export default function AdminDashboard() {
     );
   }, [items, activeTab, search]);
 
-  /*
-  =====================================================
-  LOADING STATE
-  =====================================================
-  */
-
   if (loading) {
     return (
       <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100">
         <div className="animate-pulse space-y-6">
-
           <div className="h-10 w-64 bg-gray-200 rounded-xl"></div>
-
           <div className="grid md:grid-cols-3 gap-6">
             {[1,2,3].map(i => (
               <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>
             ))}
           </div>
-
         </div>
       </div>
     );
   }
-
-  /*
-  =====================================================
-  MAIN UI
-  =====================================================
-  */
 
   return (
     <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 space-y-8">
@@ -134,7 +155,6 @@ export default function AdminDashboard() {
 
       {/* STATS GRID */}
       <div className="grid md:grid-cols-3 gap-6">
-
         <StatCard
           title="Total Lost Reports"
           value={stats.totalLost}
@@ -155,17 +175,15 @@ export default function AdminDashboard() {
           icon={<Archive/>}
           color="from-blue-50 to-blue-100 text-blue-600"
         />
-
       </div>
 
       {/* MANAGEMENT PANEL */}
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-8 space-y-6">
 
-        {/* TITLE + SEARCH */}
         <div className="flex flex-wrap justify-between gap-4 items-center">
 
-          <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-            <Archive size={20}/>
+          <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+            <Archive size={22}/>
             Reports Management
           </h2>
 
@@ -173,7 +191,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* TABS */}
-        <div className="flex gap-8 border-b text-sm font-medium">
+        <div className="flex gap-12 border-b text-base font-medium">
 
           <TabButton
             label="Found Items"
@@ -191,7 +209,6 @@ export default function AdminDashboard() {
 
         </div>
 
-        {/* TABLE */}
         <TableView
           items={filteredItems}
           handleAction={handleAction}
@@ -226,7 +243,7 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 const SearchBar = ({ search, setSearch }) => (
-  <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 w-full md:w-80 focus-within:ring-2 focus-within:ring-blue-400/30 transition">
+  <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-5 py-3 w-full md:w-96 focus-within:ring-2 focus-within:ring-blue-400/30 transition">
     <Search size={18} className="text-gray-400"/>
     <input
       placeholder="Search reports..."
@@ -241,13 +258,19 @@ const TabButton = ({ label, active, onClick, activeColor }) => (
   <button
     onClick={onClick}
     className={`
-      pb-3 border-b-2 transition-all duration-200
+      pb-4 border-b-2 text-base transition-all duration-200 font-medium
       ${active ? activeColor : "border-transparent text-gray-500 hover:text-gray-700"}
     `}
   >
     {label}
   </button>
 );
+
+/*
+=====================================================
+ TABLE VIEW (IMAGE NOW BIGGER ⭐)
+=====================================================
+*/
 
 const TableView = ({ items, handleAction }) => (
   <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
@@ -256,11 +279,11 @@ const TableView = ({ items, handleAction }) => (
 
       <thead className="bg-gray-50 text-gray-500 uppercase text-xs sticky top-0">
         <tr>
-          <th className="p-4 text-left">Image</th>
-          <th className="p-4 text-left">Item Name</th>
-          <th className="p-4 text-left">Status</th>
-          <th className="p-4 text-left">Reported</th>
-          <th className="p-4 text-left">Actions</th>
+          <th className="p-5 text-left">Image</th>
+          <th className="p-5 text-left">Item Name</th>
+          <th className="p-5 text-left">Status</th>
+          <th className="p-5 text-left">Date Reported</th>
+          <th className="p-5 text-center">Actions</th>
         </tr>
       </thead>
 
@@ -268,18 +291,14 @@ const TableView = ({ items, handleAction }) => (
 
         {items.length === 0 && (
           <tr>
-            <td colSpan={5} className="p-10 text-center text-gray-400">
-              <Archive size={40} className="mx-auto opacity-30"/>
-              <p className="mt-2">No reports found</p>
+            <td colSpan={5} className="p-14 text-center text-gray-400">
+              <Archive size={48} className="mx-auto opacity-30"/>
+              <p className="mt-3 text-base">No reports found</p>
             </td>
           </tr>
         )}
 
         {items.map(item => {
-
-          /* ===============================
-             Date Formatting
-          =============================== */
 
           const dateObj = item.created_at
             ? new Date(item.created_at)
@@ -302,69 +321,82 @@ const TableView = ({ items, handleAction }) => (
 
           return (
             <tr
-              key={item.id}
-              className="border-b border-gray-100 hover:bg-gray-50/80 transition"
+              key={`${item.item_type}-${item.id}`}
+              className="border-b border-gray-100 hover:bg-gray-100 transition group"
             >
 
-              {/* IMAGE */}
-              <td className="p-4">
-                <img
-                  src={item.image_path || "/placeholder.png"}
-                  className="w-14 h-14 object-cover rounded-xl border border-gray-200"
-                  alt={item.item_name}
-                />
+              {/* IMAGE — BIGGER DISPLAY */}
+              <td className="p-5">
+                <div className="w-28 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm group-hover:shadow-md transition">
+                  <img
+                    src={`http://localhost:7002${item.image_path}`}
+                    alt={item.item_name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </td>
 
-              {/* ITEM DETAILS */}
-              <td className="p-4 font-medium text-gray-800">
-
-                <div>{item.item_name}</div>
-
+              <td className="p-5 font-semibold text-gray-800 text-base">
+                {item.item_name}
               </td>
 
-              {/* STATUS */}
-              <td className="p-4">
+              <td className="p-5">
                 <StatusBadge status={item.status}/>
               </td>
 
-              {/* DATE + TIME */}
-              <td className="p-4 text-gray-500 text-xs leading-relaxed">
+                <td className="p-5 text-gray-600 leading-relaxed">
 
-                <div>{formattedDate}</div>
+                  <div className="text-sm font-medium text-gray-700">
+                    {formattedDate}
+                  </div>
 
-                <div className="text-gray-300 text-[11px]">
-                  {formattedTime}
-                </div>
+                  <div className="text-xs text-gray-400">
+                    {formattedTime}
+                  </div>
 
-              </td>
+                </td>
 
-              {/* ACTIONS */}
-              <td className="p-4 flex gap-2 flex-wrap">
+<td className="p-5">
+  <div className="flex gap-2 flex-wrap justify-center items-center">
 
-                {item.status === "pending" && (
-                  <ActionButton
-                    label="Verify"
-                    color="bg-green-600 text-white"
-                    onClick={() => handleAction(item.id,"verify")}
-                  />
-                )}
+    {/* VERIFY / UNVERIFY TOGGLE */}
+{item.status === "approved" || item.status === "pending" ? (
+  <ActionButton
+    label={item.status === "approved" ? "Unverify" : "Verify"}
+    color="bg-green-600 text-white"
+    onClick={() =>
+      handleAction(
+        item.id,
+        "verify",
+        item.status
+      )
+    }
+  />
+) : null}
 
-                {item.status !== "claimed" && (
-                  <ActionButton
-                    label="Claim"
-                    color="border border-blue-600 text-blue-600"
-                    outline
-                    onClick={() => handleAction(item.id,"claimed")}
-                  />
-                )}
+    {/* CLAIM / UNCLAIM TOGGLE */}
+<ActionButton
+  label={item.status === "claimed" ? "Unclaim" : "Claim"}
+  color="border border-blue-600 text-blue-600"
+  outline
+  onClick={() =>
+    handleAction(
+      item.id,
+      "claimed",
+      item.status
+    )
+  }
+/>
 
-                <ActionButton
-                  label="Delete"
-                  color="bg-red-600 text-white"
-                  onClick={() => handleAction(item.id,"delete")}
-                />
+    {/* DELETE ALWAYS AVAILABLE */}
+    <ActionButton
+      label="Delete"
+      color="bg-red-600 text-white"
+      onClick={() => handleAction(item.id,"delete")}
+    />
 
-              </td>
+  </div>
+</td>
 
             </tr>
           );
@@ -383,7 +415,7 @@ const StatusBadge = ({ status }) => {
   };
 
   return (
-    <span className={`px-3 py-1 text-xs rounded-full font-semibold ${map[status] || "bg-gray-100 text-gray-600"}`}>
+    <span className={`px-3 py-1 text-small rounded-full font-semibold ${map[status] || "bg-gray-100 text-gray-600"}`}>
       {status || "unknown"}
     </span>
   );
@@ -393,7 +425,7 @@ const ActionButton = ({ label, color, onClick, outline }) => (
   <button
     onClick={onClick}
     className={`
-      px-3 py-1 text-xs rounded-xl shadow-sm hover:shadow-md transition font-medium
+      px-4 py-2 text-xs rounded-xl shadow-sm hover:shadow-md transition font-medium
       ${outline ? color : color + " hover:opacity-90"}
     `}
   >
