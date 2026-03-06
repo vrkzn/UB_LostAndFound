@@ -36,31 +36,37 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     =====================================================
     */
 
-    const [foundItems] = await db.query(`
-      SELECT
-        f.id,
-        f.item_name,
-        f.category,
-        f.description,
-        f.notes,
-        f.location_found AS location,
-        f.date_found,
-        f.time_found,
-        f.claim_to,
-        f.status,
-        f.created_at,
-        'found' AS item_type,
+const [foundItems] = await db.query(`
+  SELECT
+    f.id,
+    f.item_name,
+    f.category,
+    f.description,
+    f.notes,
+    f.location_found AS location,
+    f.date_found,
+    f.time_found,
+    f.claim_to,
+    f.status,
+    f.created_at,
+    'found' AS item_type,
 
-        (
-          SELECT image_path
-          FROM FOUND_ITEM_IMAGES
-          WHERE found_item_id = f.id
-          LIMIT 1
-        ) AS image_path
+    CASE
+      WHEN f.isAnonymous = 1 THEN 'Anonymous'
+      ELSE u.name
+    END AS reporter_name,
 
-      FROM FOUND_ITEMS f
-      ORDER BY f.created_at DESC
-    `);
+    (
+      SELECT image_path
+      FROM FOUND_ITEM_IMAGES
+      WHERE found_item_id = f.id
+      LIMIT 1
+    ) AS image_path
+
+  FROM FOUND_ITEMS f
+  LEFT JOIN USERS u ON u.id = f.user_id
+  ORDER BY f.created_at DESC
+`);
 
     /*
     =====================================================
@@ -68,31 +74,37 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     =====================================================
     */
 
-    const [lostItems] = await db.query(`
-      SELECT
-        l.id,
-        l.item_name,
-        l.category,
-        l.description,
-        l.notes,
-        l.location_lost AS location,
-        l.date_lost AS date_found,
-        l.time_lost AS time_found,
-        l.claim_to,
-        l.status,
-        l.created_at,
-        'lost' AS item_type,
+const [lostItems] = await db.query(`
+  SELECT
+    l.id,
+    l.item_name,
+    l.category,
+    l.description,
+    l.notes,
+    l.location_lost AS location,
+    l.date_lost AS date_found,
+    l.time_lost AS time_found,
+    l.claim_to,
+    l.status,
+    l.created_at,
+    'lost' AS item_type,
 
-        (
-          SELECT image_path
-          FROM LOST_ITEM_IMAGES
-          WHERE lost_item_id = l.id
-          LIMIT 1
-        ) AS image_path
+    CASE
+      WHEN l.isAnonymous = 1 THEN 'Anonymous'
+      ELSE u.name
+    END AS reporter_name,
 
-      FROM LOST_ITEMS l
-      ORDER BY l.created_at DESC
-    `);
+    (
+      SELECT image_path
+      FROM LOST_ITEM_IMAGES
+      WHERE lost_item_id = l.id
+      LIMIT 1
+    ) AS image_path
+
+  FROM LOST_ITEMS l
+  LEFT JOIN USERS u ON u.id = l.user_id
+  ORDER BY l.created_at DESC
+`);
 
     res.json({
       stats: {

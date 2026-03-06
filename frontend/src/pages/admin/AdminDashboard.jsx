@@ -258,7 +258,7 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 const SearchBar = ({ search, setSearch }) => (
-  <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-5 py-3 w-full md:w-96 focus-within:ring-2 focus-within:ring-blue-400/30 transition">
+  <div className="flex items-center gap-3 bg-gray-50 border border-black-1500 rounded-xl px-5 py-3 w-full md:w-96 focus-within:ring-2 focus-within:ring-blue-400/30 transition">
     <Search size={18} className="text-gray-400"/>
     <input
       placeholder="Search reports..."
@@ -305,9 +305,7 @@ const TableView = ({ items, handleAction }) => {
 
       {items.map(item => {
 
-        const dateObj = item.created_at
-          ? new Date(item.created_at)
-          : null;
+        const dateObj = item.created_at ? new Date(item.created_at) : null;
 
         const formattedDate = dateObj
           ? dateObj.toLocaleDateString("en-US", {
@@ -327,81 +325,135 @@ const TableView = ({ items, handleAction }) => {
         return (
           <div
             key={`${item.item_type}-${item.id}`}
-            className="bg-white rounded-3xl shadow-xl shadow-gray-200/40 hover:shadow-2xl transition duration-300 overflow-hidden border border-gray-100"
+            className="
+              bg-white rounded-2xl
+              border border-black/20
+              shadow-sm hover:shadow-xl
+              transition-all duration-300
+              overflow-hidden
+            "
           >
 
             {/* HEADER */}
-            <div className="flex justify-between items-start p-6">
+            <div className="flex justify-between items-start p-6 border-b border-gray-200">
 
-              <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-gray-900">
+              {/* LEFT */}
+              <div className="space-y-2">
+
+                <h3 className="text-xl font-semibold text-gray-900">
                   {item.item_name}
                 </h3>
 
-                <p className="text-xs text-gray-400 capitalize flex gap-2">
-                  <span>{item.item_type}</span>
-                  <span>•</span>
-                  <span>Reported {formattedDate} {formattedTime}</span>
+                {/* Reporter Info */}
+                <p className="text-sm text-gray-600">
+                  Reported by :
+                  <span className="font-medium text-gray-900 ml-1">
+                    {item.anonymous ? "Anonymous" : (item.reporter_name || "Anonymous")}
+                  </span>
+                </p>
+
+                <div className="flex items-center gap-3 text-xs">
+
+                  <span
+                    className={`
+                      px-2 py-1 rounded-full font-medium capitalize
+                      ${item.item_type === "found"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"}
+                    `}
+                  >
+                    {item.item_type}
+                  </span>
+
+                  <span className="text-gray-400">
+                    {item.item_type === "found" ? "Found" : "Lost"}
+                    {" "}{formattedDate} | {formattedTime}
+                  </span>
+
+                </div>
+              </div>
+
+              {/* RIGHT */}
+              <div className="flex flex-col items-end gap-2">
+                <StatusBadge status={item.status} />
+
+                <p className="text-xs text-gray-400">
+                  Reported {formattedDate} | {formattedTime}
                 </p>
               </div>
 
-              <StatusBadge status={item.status} />
-
             </div>
 
-            {/* CONTENT */}
-            <div className="px-6 pb-6 space-y-6">
+            {/* BODY */}
+            <div className="p-6 space-y-6">
 
+              {/* IMAGE + DETAILS GRID */}
               <div className="flex gap-6 flex-wrap">
 
                 {/* IMAGE */}
-                <div className="w-32 h-32 rounded-2xl overflow-hidden shadow-sm border flex-shrink-0">
+                <div className="w-64 h-64 rounded-xl overflow-hidden border border-gray-300 bg-gray-50 flex-shrink-0 shadow-sm">
                   <img
                     src={`http://localhost:7002${item.image_path}`}
                     alt={item.item_name}
-                    className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                    className="w-full h-full object-cover hover:scale-110 transition duration-500"
                   />
                 </div>
 
-                {/* DETAILS GRID */}
-                <div className="grid md:grid-cols-2 gap-4 text-sm flex-1">
+                {/* TEXT CONTENT */}
+                <div className="flex-1 space-y-6 text-sm">
 
-                  <DetailBlock
-                    title="Description"
-                    value={item.description || "No description"}
-                  />
+                  {/* Description + Notes */}
+                  <div className="grid md:grid-cols-2 gap-6">
 
-                  <DetailBlock
-                    title="Notes"
-                    value={item.notes || "No notes"}
-                  />
+                    <DetailBlock
+                      title="Item Description"
+                      value={item.description || "No description"}
+                      large
+                    />
 
-<DetailBlock
-  title="Location"
-  value={
-    item.location_found ||
-    item.location_lost ||
-    item.location ||
-    "Not specified"
-  }
-/>
+                    <DetailBlock
+                      title="Notes"
+                      value={item.notes || "No notes"}
+                      large
+                    />
 
-                  <DetailBlock
-                    title="Claim / Surrender To"
-                    value={item.claim_to || "Not specified"}
-                  />
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="grid md:grid-cols-2 gap-6">
+
+                    <DetailBlock
+                      title={item.item_type === "found"
+                        ? "Location Found"
+                        : "Location Lost"}
+                      value={
+                        item.location_found ||
+                        item.location_lost ||
+                        item.location ||
+                        "Not specified"
+                      }
+                    />
+
+                    <DetailBlock
+                      title={item.item_type === "found"
+                        ? "Claim To"
+                        : "Surrender To"}
+                      value={item.claim_to || "Not specified"}
+                    />
+
+                  </div>
 
                 </div>
               </div>
             </div>
 
-            {/* ACTION FOOTER */}
-            <div className="p-6 bg-gray-50 flex justify-end flex-wrap gap-3">
+            {/* FOOTER ACTION AREA */}
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-200">
 
               {(item.status === "approved" || item.status === "pending") && (
                 <ActionButton
                   label={item.status === "approved" ? "Unverify" : "Verify"}
-                  color="bg-green-600 text-white"
+                  color="bg-green-600 text-white hover:bg-green-700"
                   onClick={() =>
                     handleAction(item.id, "verify", item.status)
                   }
@@ -410,7 +462,7 @@ const TableView = ({ items, handleAction }) => {
 
               <ActionButton
                 label={item.status === "claimed" ? "Unclaim" : "Claim"}
-                color="border border-blue-600 text-blue-600"
+                color="border border-blue-600 text-blue-600 hover:bg-blue-50"
                 outline
                 onClick={() =>
                   handleAction(item.id, "claimed", item.status)
@@ -419,12 +471,13 @@ const TableView = ({ items, handleAction }) => {
 
               <ActionButton
                 label="Delete"
-                color="bg-red-600 text-white"
+                color="bg-red-600 text-white hover:bg-red-700"
                 onClick={() =>
                   handleAction(item.id, "delete")}
               />
 
             </div>
+
           </div>
         );
       })}
@@ -438,10 +491,20 @@ const TableView = ({ items, handleAction }) => {
 =====================================================
 */
 
-const DetailBlock = ({ title, value }) => (
-  <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 hover:bg-gray-100 transition">
-    <p className="text-xs text-gray-400 mb-1">{title}</p>
-    <p className="text-sm text-gray-700 font-medium leading-relaxed">
+const DetailBlock = ({ title, value, large }) => (
+  <div
+    className={`
+      bg-gray-50 border border-black/20 rounded-xl
+      flex flex-col
+      transition hover:bg-gray-100
+      ${large ? "min-h-[160px] p-5" : "p-4"}
+    `}
+  >
+    <p className="text-sm font-bold text-gray-900 mb-3">
+      {title}
+    </p>
+
+    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap flex-1">
       {value}
     </p>
   </div>
