@@ -410,19 +410,4 @@ router.get("/:type", authenticateToken, async (req, res) => {
     }
 });
 
-// router.get("/found", authenticateToken, async (req, res) => {
-//   const [rows] = await db.query(`
-//     SELECT * FROM FOUND_ITEMS ORDER BY created_at DESC
-//   `);
-
-//   res.json(rows);
-// });
-
-// router.get("/lost", authenticateToken, async (req, res) => {
-//   const [rows] = await db.query(`
-//     SELECT * FROM LOST_ITEMS ORDER BY created_at DESC
-//   `);
-
-//   res.json(rows);
-// });
 export default router;

@@ -325,16 +325,25 @@ const handleSubmit = async (e) => {
 
           </div>
 
-          {/* Submit */}
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#5B0000] hover:bg-[#7A0000] text-white p-3 rounded-xl shadow-md transition disabled:opacity-60"
-            >
-              {loading ? "Submitting..." : "Submit Found Item Report"}
-            </button>
-          </div>
+{/* Submit */}
+<div className="md:col-span-2 space-y-2">
+
+  <button
+    type="submit"
+    disabled={loading}
+    className="w-full bg-[#5B0000] hover:bg-[#7A0000] text-white p-3 rounded-xl shadow-md transition disabled:opacity-60"
+  >
+    {loading ? "Submitting..." : "Submit Found Item Report"}
+  </button>
+
+  {/* Error text — clean, borderless */}
+  {error && (
+    <p className="text-red-600 text-sm ">
+      {error}
+    </p>
+  )}
+
+</div>
 
         </div>
       </form>

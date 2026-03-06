@@ -297,16 +297,25 @@ export default function LostItemPage() {
             </span>
           </div>
 
-          {/* Submit */}
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#5B0000] hover:bg-[#7A0000] text-white p-3 rounded-xl shadow-md transition disabled:opacity-60"
-            >
-              {loading ? "Submitting..." : "Submit Lost Item Report"}
-            </button>
-          </div>
+{/* Submit */}
+<div className="md:col-span-2 space-y-2">
+
+  <button
+    type="submit"
+    disabled={loading}
+    className="w-full bg-[#5B0000] hover:bg-[#7A0000] text-white p-3 rounded-xl shadow-md transition disabled:opacity-60"
+  >
+    {loading ? "Submitting..." : "Submit Lost Item Report"}
+  </button>
+
+  {/* Error text — plain, no border */}
+  {error && (
+    <p className="text-red-600 text-sm text-center ">
+      {error}
+    </p>
+  )}
+
+</div>
 
         </div>
       </form>

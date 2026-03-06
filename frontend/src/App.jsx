@@ -7,6 +7,7 @@ import Dashboard from "./pages/student/Dashboard.jsx";
 import ReportFoundItems from "./pages/student/ReportFoundItems.jsx";
 import ReportLostItems from "./pages/student/ReportLostItems.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import ReportDetails from "./pages/student/ReportDetails.jsx";
 
 
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="/founditems" element={<ReportFoundItems />} />
             <Route path="/lostitems" element={<ReportLostItems />} />
             <Route path="/admindashboard" element={<AdminDashboard />} />
+            <Route path="/reportdetails" element={<ReportDetails />} />
           </Route>
             <Route element={<Layout />}>
             <Route path="/admindashboard" element={<AdminDashboard />} />

@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
+import ReportDetails from "./ReportDetails";
 
 export default function LostAndFoundFrontend() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("found");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const fetchItems = async (type) => {
     try {
@@ -17,6 +19,7 @@ export default function LostAndFoundFrontend() {
 const res = await api.get(`/items/${type}`);
 
         setItems(res.data);
+        console.log("Fetched Items:", res.data);
 
     } catch (err) {
         console.error(err);
@@ -111,10 +114,11 @@ useEffect(() => {
     <div className="grid md:grid-cols-4 gap-6">
 
         {items.map((item) => (
-            <div
-                key={item.id}
-                className="bg-white p-5 rounded-2xl shadow-md flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition duration-300"
-            >
+<div
+    key={item.id}
+    onClick={() => setSelectedItem(item)}
+    className="bg-white p-5 rounded-2xl shadow-md flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer"
+>
 
 <div className="w-full h-40 bg-gray-200 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
 
@@ -138,6 +142,11 @@ useEffect(() => {
     </div>
 </div>
 
+<ReportDetails
+  show={selectedItem !== null}
+  item={selectedItem}
+  onClose={() => setSelectedItem(null)}
+/>
       </main>
 
     </div>
