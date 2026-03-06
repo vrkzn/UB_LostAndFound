@@ -117,12 +117,22 @@ const handleAction = async (id, action, currentStatus) => {
   =====================================================
   */
 
-  const filteredItems = useMemo(() => {
-    return items.filter(item =>
-      item.item_type === activeTab &&
-      item.item_name?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [items, activeTab, search]);
+const filteredItems = useMemo(() => {
+  return items.filter(item => {
+
+    const matchType =
+      activeTab === "all" ||
+      item.item_type === activeTab;
+
+    const matchSearch =
+      item.item_name
+        ?.toLowerCase()
+        .includes(search.toLowerCase());
+
+    return matchType && matchSearch;
+
+  });
+}, [items, activeTab, search]);
 
   if (loading) {
     return (
@@ -192,7 +202,12 @@ const handleAction = async (id, action, currentStatus) => {
 
         {/* TABS */}
         <div className="flex gap-12 border-b text-base font-medium">
-
+          <TabButton
+            label="All Items"
+            active={activeTab === "all"}
+            onClick={() => setActiveTab("all")}
+            activeColor="border-green-600 text-green-600"
+          />
           <TabButton
             label="Found Items"
             active={activeTab === "found"}
@@ -268,142 +283,167 @@ const TabButton = ({ label, active, onClick, activeColor }) => (
 
 /*
 =====================================================
- TABLE VIEW (IMAGE NOW BIGGER ⭐)
+ PREMIUM CLEAN FEED CARD VIEW (NO INTERNAL LINES)
 =====================================================
 */
 
-const TableView = ({ items, handleAction }) => (
-  <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+const TableView = ({ items, handleAction }) => {
 
-    <table className="w-full text-sm">
+  if (!items.length) {
+    return (
+      <div className="p-20 text-center text-gray-400">
+        <Archive size={60} className="mx-auto opacity-30" />
+        <p className="mt-4 text-lg font-medium">
+          No reports found
+        </p>
+      </div>
+    );
+  }
 
-      <thead className="bg-gray-50 text-gray-500 uppercase text-xs sticky top-0">
-        <tr>
-          <th className="p-5 text-left">Image</th>
-          <th className="p-5 text-left">Item Name</th>
-          <th className="p-5 text-left">Status</th>
-          <th className="p-5 text-left">Date Reported</th>
-          <th className="p-5 text-center">Actions</th>
-        </tr>
-      </thead>
+  return (
+    <div className="space-y-10">
 
-      <tbody>
+      {items.map(item => {
 
-        {items.length === 0 && (
-          <tr>
-            <td colSpan={5} className="p-14 text-center text-gray-400">
-              <Archive size={48} className="mx-auto opacity-30"/>
-              <p className="mt-3 text-base">No reports found</p>
-            </td>
-          </tr>
-        )}
+        const dateObj = item.created_at
+          ? new Date(item.created_at)
+          : null;
 
-        {items.map(item => {
+        const formattedDate = dateObj
+          ? dateObj.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric"
+            })
+          : "N/A";
 
-          const dateObj = item.created_at
-            ? new Date(item.created_at)
-            : null;
+        const formattedTime = dateObj
+          ? dateObj.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit"
+            })
+          : "";
 
-          const formattedDate = dateObj
-            ? dateObj.toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric"
-              })
-            : "N/A";
+        return (
+          <div
+            key={`${item.item_type}-${item.id}`}
+            className="bg-white rounded-3xl shadow-xl shadow-gray-200/40 hover:shadow-2xl transition duration-300 overflow-hidden border border-gray-100"
+          >
 
-          const formattedTime = dateObj
-            ? dateObj.toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit"
-              })
-            : "";
+            {/* HEADER */}
+            <div className="flex justify-between items-start p-6">
 
-          return (
-            <tr
-              key={`${item.item_type}-${item.id}`}
-              className="border-b border-gray-100 hover:bg-gray-100 transition group"
-            >
+              <div className="space-y-1">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {item.item_name}
+                </h3>
 
-              {/* IMAGE — BIGGER DISPLAY */}
-              <td className="p-5">
-                <div className="w-28 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm group-hover:shadow-md transition">
+                <p className="text-xs text-gray-400 capitalize flex gap-2">
+                  <span>{item.item_type}</span>
+                  <span>•</span>
+                  <span>Reported {formattedDate} {formattedTime}</span>
+                </p>
+              </div>
+
+              <StatusBadge status={item.status} />
+
+            </div>
+
+            {/* CONTENT */}
+            <div className="px-6 pb-6 space-y-6">
+
+              <div className="flex gap-6 flex-wrap">
+
+                {/* IMAGE */}
+                <div className="w-32 h-32 rounded-2xl overflow-hidden shadow-sm border flex-shrink-0">
                   <img
                     src={`http://localhost:7002${item.image_path}`}
                     alt={item.item_name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover hover:scale-105 transition duration-300"
                   />
                 </div>
-              </td>
 
-              <td className="p-5 font-semibold text-gray-800 text-base">
-                {item.item_name}
-              </td>
+                {/* DETAILS GRID */}
+                <div className="grid md:grid-cols-2 gap-4 text-sm flex-1">
 
-              <td className="p-5">
-                <StatusBadge status={item.status}/>
-              </td>
+                  <DetailBlock
+                    title="Description"
+                    value={item.description || "No description"}
+                  />
 
-                <td className="p-5 text-gray-600 leading-relaxed">
+                  <DetailBlock
+                    title="Notes"
+                    value={item.notes || "No notes"}
+                  />
 
-                  <div className="text-sm font-medium text-gray-700">
-                    {formattedDate}
-                  </div>
-
-                  <div className="text-xs text-gray-400">
-                    {formattedTime}
-                  </div>
-
-                </td>
-
-<td className="p-5">
-  <div className="flex gap-2 flex-wrap justify-center items-center">
-
-    {/* VERIFY / UNVERIFY TOGGLE */}
-{item.status === "approved" || item.status === "pending" ? (
-  <ActionButton
-    label={item.status === "approved" ? "Unverify" : "Verify"}
-    color="bg-green-600 text-white"
-    onClick={() =>
-      handleAction(
-        item.id,
-        "verify",
-        item.status
-      )
-    }
-  />
-) : null}
-
-    {/* CLAIM / UNCLAIM TOGGLE */}
-<ActionButton
-  label={item.status === "claimed" ? "Unclaim" : "Claim"}
-  color="border border-blue-600 text-blue-600"
-  outline
-  onClick={() =>
-    handleAction(
-      item.id,
-      "claimed",
-      item.status
-    )
+<DetailBlock
+  title="Location"
+  value={
+    item.location_found ||
+    item.location_lost ||
+    item.location ||
+    "Not specified"
   }
 />
 
-    {/* DELETE ALWAYS AVAILABLE */}
-    <ActionButton
-      label="Delete"
-      color="bg-red-600 text-white"
-      onClick={() => handleAction(item.id,"delete")}
-    />
+                  <DetailBlock
+                    title="Claim / Surrender To"
+                    value={item.claim_to || "Not specified"}
+                  />
 
-  </div>
-</td>
+                </div>
+              </div>
+            </div>
 
-            </tr>
-          );
-        })}
+            {/* ACTION FOOTER */}
+            <div className="p-6 bg-gray-50 flex justify-end flex-wrap gap-3">
 
-      </tbody>
-    </table>
+              {(item.status === "approved" || item.status === "pending") && (
+                <ActionButton
+                  label={item.status === "approved" ? "Unverify" : "Verify"}
+                  color="bg-green-600 text-white"
+                  onClick={() =>
+                    handleAction(item.id, "verify", item.status)
+                  }
+                />
+              )}
+
+              <ActionButton
+                label={item.status === "claimed" ? "Unclaim" : "Claim"}
+                color="border border-blue-600 text-blue-600"
+                outline
+                onClick={() =>
+                  handleAction(item.id, "claimed", item.status)
+                }
+              />
+
+              <ActionButton
+                label="Delete"
+                color="bg-red-600 text-white"
+                onClick={() =>
+                  handleAction(item.id, "delete")}
+              />
+
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/*
+=====================================================
+ DETAIL BLOCK COMPONENT
+=====================================================
+*/
+
+const DetailBlock = ({ title, value }) => (
+  <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 hover:bg-gray-100 transition">
+    <p className="text-xs text-gray-400 mb-1">{title}</p>
+    <p className="text-sm text-gray-700 font-medium leading-relaxed">
+      {value}
+    </p>
   </div>
 );
 

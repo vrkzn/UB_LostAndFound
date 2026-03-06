@@ -332,20 +332,32 @@ router.get("/:type", authenticateToken, async (req, res) => {
             });
         }
 
-        const table =
-            type === "found"
-                ? "FOUND_ITEMS"
-                : "LOST_ITEMS";
+        /*
+        =====================================================
+        CONFIGURATION MAP (SAFE TABLE RESOLUTION)
+        =====================================================
+        */
 
-        const imageTable =
-            type === "found"
-                ? "FOUND_ITEM_IMAGES"
-                : "LOST_ITEM_IMAGES";
+        const config = {
+            found: {
+                table: "FOUND_ITEMS",
+                imageTable: "FOUND_ITEM_IMAGES",
+                foreignKey: "found_item_id"
+            },
+            lost: {
+                table: "LOST_ITEMS",
+                imageTable: "LOST_ITEM_IMAGES",
+                foreignKey: "lost_item_id"
+            }
+        };
 
-        const foreignKey =
-            type === "found"
-                ? "found_item_id"
-                : "lost_item_id";
+        const { table, imageTable, foreignKey } = config[type];
+
+        /*
+        =====================================================
+        FETCH ITEMS
+        =====================================================
+        */
 
         const [rows] = await db.query(`
             SELECT 
@@ -353,6 +365,12 @@ router.get("/:type", authenticateToken, async (req, res) => {
                 i.item_name,
                 i.category,
                 i.description,
+                i.date_lost,
+                i.time_lost,
+                i.location_lost AS location_lost,
+                i.claim_to,
+                i.notes,
+                i.isAnonymous,
                 i.status,
                 i.created_at,
 
@@ -368,13 +386,13 @@ router.get("/:type", authenticateToken, async (req, res) => {
             ORDER BY i.created_at DESC
         `);
 
-        res.json(rows);
+        return res.json(rows);
 
     } catch (error) {
 
         console.error("Fetch Items Error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Server error"
         });
     }

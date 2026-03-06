@@ -79,7 +79,6 @@ useEffect(() => {
         {/* Tabs Section */}
         <div className="px-6 mt-2">
           <div className="flex border-b">
-
             <button
               onClick={() => setActiveTab("found")}
               className={`px-5 py-3 font-semibold transition ${

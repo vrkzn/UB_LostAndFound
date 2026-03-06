@@ -5,6 +5,7 @@ import db from "../db.js";
 const router = express.Router();
 
 router.get("/dashboard", authenticateToken, async (req, res) => {
+
   try {
 
     /*
@@ -13,15 +14,15 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     =====================================================
     */
 
-    const [lostStats] = await db.query(
+    const [[lostStats]] = await db.query(
       "SELECT COUNT(*) AS total FROM LOST_ITEMS"
     );
 
-    const [foundStats] = await db.query(
+    const [[foundStats]] = await db.query(
       "SELECT COUNT(*) AS total FROM FOUND_ITEMS"
     );
 
-    const [unclaimedStats] = await db.query(`
+    const [[unclaimedStats]] = await db.query(`
       SELECT COUNT(*) AS total FROM (
         SELECT id FROM LOST_ITEMS WHERE status != 'claimed'
         UNION ALL
@@ -31,61 +32,81 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
     /*
     =====================================================
-    FETCH FOUND ITEMS
+    FETCH FOUND ITEMS (FULL DATA ⭐)
     =====================================================
     */
 
     const [foundItems] = await db.query(`
-SELECT
-  f.id,
-  f.item_name,
-  f.status,
-  f.created_at,
-  (
-    SELECT image_path
-    FROM FOUND_ITEM_IMAGES
-    WHERE found_item_id = f.id
-    LIMIT 1
-  ) AS image_path,
-  'found' AS item_type
-FROM FOUND_ITEMS f
-ORDER BY f.created_at DESC
+      SELECT
+        f.id,
+        f.item_name,
+        f.category,
+        f.description,
+        f.notes,
+        f.location_found AS location,
+        f.date_found,
+        f.time_found,
+        f.claim_to,
+        f.status,
+        f.created_at,
+        'found' AS item_type,
+
+        (
+          SELECT image_path
+          FROM FOUND_ITEM_IMAGES
+          WHERE found_item_id = f.id
+          LIMIT 1
+        ) AS image_path
+
+      FROM FOUND_ITEMS f
+      ORDER BY f.created_at DESC
     `);
 
     /*
     =====================================================
-    FETCH LOST ITEMS
+    FETCH LOST ITEMS (FULL DATA ⭐)
     =====================================================
     */
 
     const [lostItems] = await db.query(`
-SELECT
-  l.id,
-  l.item_name,
-  l.status,
-  l.created_at,
-  (
-    SELECT image_path
-    FROM LOST_ITEM_IMAGES
-    WHERE lost_item_id = l.id
-    LIMIT 1
-  ) AS image_path,
-  'lost' AS item_type
-FROM LOST_ITEMS l
-ORDER BY l.created_at DESC
+      SELECT
+        l.id,
+        l.item_name,
+        l.category,
+        l.description,
+        l.notes,
+        l.location_lost AS location,
+        l.date_lost AS date_found,
+        l.time_lost AS time_found,
+        l.claim_to,
+        l.status,
+        l.created_at,
+        'lost' AS item_type,
+
+        (
+          SELECT image_path
+          FROM LOST_ITEM_IMAGES
+          WHERE lost_item_id = l.id
+          LIMIT 1
+        ) AS image_path
+
+      FROM LOST_ITEMS l
+      ORDER BY l.created_at DESC
     `);
 
     res.json({
       stats: {
-        totalLost: lostStats[0].total,
-        totalFound: foundStats[0].total,
-        totalUnclaimed: unclaimedStats[0].total
+        totalLost: lostStats.total,
+        totalFound: foundStats.total,
+        totalUnclaimed: unclaimedStats.total
       },
+
       items: [...foundItems, ...lostItems]
     });
 
   } catch (err) {
     console.error(err);
+
     res.status(500).json({
       message: "Dashboard fetch failed"
     });
