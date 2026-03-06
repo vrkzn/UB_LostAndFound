@@ -37,5 +37,6 @@ app.use("/api/items", itemsRouter);
 app.use("/api/admin", adminRouter);
 
 app.listen(port, () => {
+   
     console.log(`Server started on http://localhost:${port}`);
 });

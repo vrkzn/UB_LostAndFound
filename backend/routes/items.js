@@ -23,7 +23,24 @@ const __dirname = path.dirname(__filename);
  Upload Directory Setup
 ====================================================
 */
+// Ensure folder exists
+const lostDir = path.join(__dirname, "../uploads/lost_items");
 
+if (!fs.existsSync(lostDir)) {
+  fs.mkdirSync(lostDir, { recursive: true });
+}
+
+const lostUpload = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, lostDir);
+    },
+    filename: function (req, file, cb) {
+      const uniqueName = Date.now() + "-" + file.originalname;
+      cb(null, uniqueName);
+    }
+  })
+});
 const uploadDir = path.join(__dirname, "../uploads/found_items");
 
 if (!fs.existsSync(uploadDir)) {
@@ -91,8 +108,7 @@ function getPhilippineTime() {
 ====================================================
 */
 
-router.post(
-    "/found",
+router.post("/found",
     authenticateToken,
     (req, res, next) => {
         upload.array("images", 3)(req, res, next);
@@ -220,6 +236,84 @@ router.post(
     }
 );
 
+router.post("/lost", authenticateToken, upload.array("images", 3), async (req, res) => {
+  try {
+
+    const {
+      item_name,
+      category,
+      date_lost,
+      time_lost,
+      location_lost,
+      claim_to,
+      description,
+      notes,
+      isAnonymous
+    } = req.body;
+
+    // ✅ Force user_id from auth middleware
+    const user_id = req.user.id;
+
+    // Validation
+    if (!item_name || !category || !date_lost || !time_lost ||
+        !location_lost || !claim_to || !description) {
+      return res.status(400).json({
+        message: "Please fill in all required fields"
+      });
+    }
+
+    // Insert lost item
+    const insertQuery = `
+      INSERT INTO LOST_ITEMS
+      (user_id, item_name, category, date_lost, time_lost,
+       location_lost, claim_to, description, notes, isAnonymous)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const [result] = await db.execute(insertQuery, [
+      user_id,
+      item_name,
+      category,
+      date_lost,
+      time_lost,
+      location_lost,
+      claim_to,
+      description,
+      notes || null,
+      isAnonymous === "true" || isAnonymous === true ? 1 : 0
+    ]);
+
+    const lostItemId = result.insertId;
+
+    // ✅ Save images if uploaded
+    if (req.files && req.files.length > 0) {
+
+      const imageQuery = `
+        INSERT INTO LOST_ITEM_IMAGES (lost_item_id, image_path)
+        VALUES (?, ?)
+      `;
+
+      for (const file of req.files) {
+await db.execute(imageQuery, [
+  lostItemId,
+  `/uploads/found_items/${file.filename}`
+]);
+      }
+    }
+
+    res.status(201).json({
+      message: "Lost item reported successfully",
+      id: lostItemId
+    });
+
+  } catch (error) {
+    console.error("Lost Item Backend Error:", error);
+
+    res.status(500).json({
+      message: "Server error while reporting lost item"
+    });
+  }
+});
 
 /*
 ====================================================
