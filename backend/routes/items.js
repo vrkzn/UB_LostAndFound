@@ -334,7 +334,7 @@ router.get("/:type", authenticateToken, async (req, res) => {
 
         /*
         =====================================================
-        CONFIGURATION MAP (SAFE TABLE RESOLUTION)
+        CONFIGURATION MAP
         =====================================================
         */
 
@@ -342,20 +342,29 @@ router.get("/:type", authenticateToken, async (req, res) => {
             found: {
                 table: "FOUND_ITEMS",
                 imageTable: "FOUND_ITEM_IMAGES",
-                foreignKey: "found_item_id"
+                foreignKey: "found_item_id",
+
+                // ✅ Column mapping for FOUND
+                dateColumn: "date_found",
+                timeColumn: "time_found"
             },
+
             lost: {
                 table: "LOST_ITEMS",
                 imageTable: "LOST_ITEM_IMAGES",
-                foreignKey: "lost_item_id"
+                foreignKey: "lost_item_id",
+
+                // ✅ Column mapping for LOST
+                dateColumn: "date_lost",
+                timeColumn: "time_lost"
             }
         };
 
-        const { table, imageTable, foreignKey } = config[type];
+        const { table, imageTable, foreignKey, dateColumn, timeColumn } = config[type];
 
         /*
         =====================================================
-        FETCH ITEMS
+        FETCH ITEMS (DYNAMIC COLUMN SELECTION)
         =====================================================
         */
 
@@ -365,9 +374,12 @@ router.get("/:type", authenticateToken, async (req, res) => {
                 i.item_name,
                 i.category,
                 i.description,
-                i.date_lost,
-                i.time_lost,
-                i.location_lost AS location_lost,
+
+                i.${dateColumn} AS date_value,
+                i.${timeColumn} AS time_value,
+
+                i.location_${type === "found" ? "found" : "lost"} AS location,
+
                 i.claim_to,
                 i.notes,
                 i.isAnonymous,

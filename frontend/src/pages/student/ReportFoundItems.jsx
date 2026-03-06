@@ -54,7 +54,11 @@ export default function FoundItemPage() {
 const handleSubmit = async (e) => {
   e.preventDefault();
 
-
+    // ✅ Image required validation
+    if (!files.length) {
+      setError("Please upload at least one image.");
+      return;
+    }
   // Image validation (only if images exist)
   if (files.length > 3) {
     setError("You can upload a maximum of 3 images.");
@@ -277,7 +281,7 @@ const handleSubmit = async (e) => {
           <div className="md:col-span-2 flex flex-col gap-3">
 
             <label className="font-medium text-gray-700">
-              Upload Pictures (Max 3)
+              Upload Pictures (Max 3)<span className="text-red-600"> *</span>
             </label>
 
             <label className="border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-gray-50 transition">

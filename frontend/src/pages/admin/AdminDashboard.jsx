@@ -301,7 +301,7 @@ const TableView = ({ items, handleAction }) => {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
 
       {items.map(item => {
 
@@ -325,131 +325,118 @@ const TableView = ({ items, handleAction }) => {
         return (
           <div
             key={`${item.item_type}-${item.id}`}
-            className="
-              bg-white rounded-2xl
-              border border-black/20
-              shadow-sm hover:shadow-xl
-              transition-all duration-300
-              overflow-hidden
-            "
+            className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition duration-300 overflow-hidden"
           >
 
             {/* HEADER */}
-            <div className="flex justify-between items-start p-6 border-b border-gray-200">
+            <div className="flex justify-between items-start p-6 border-b border-gray-300">
 
-              {/* LEFT */}
+              {/* LEFT SIDE */}
               <div className="space-y-2">
 
                 <h3 className="text-xl font-semibold text-gray-900">
                   {item.item_name}
                 </h3>
 
-                {/* Reporter Info */}
-                <p className="text-sm text-gray-600">
-                  Reported by :
-                  <span className="font-medium text-gray-900 ml-1">
-                    {item.anonymous ? "Anonymous" : (item.reporter_name || "Anonymous")}
-                  </span>
+                {/* Reporter Name ⭐ INSERTED BELOW ITEM NAME */}
+                <p className="text-sm text-gray-600 font-medium">
+                  Reported by: {item.reporter_name || "Anonymous"}
                 </p>
 
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-3 text-sm">
 
                   <span
-                    className={`
-                      px-2 py-1 rounded-full font-medium capitalize
-                      ${item.item_type === "found"
+                    className={`px-2 py-1 rounded-full text-xs font-medium capitalize
+                    ${
+                      item.item_type === "found"
                         ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"}
-                    `}
+                        : "bg-red-100 text-red-700"
+                    }`}
                   >
                     {item.item_type}
                   </span>
 
                   <span className="text-gray-400">
-                    {item.item_type === "found" ? "Found" : "Lost"}
-                    {" "}{formattedDate} | {formattedTime}
+                    {item.item_type === "found" ? "Found" : "Lost"} {formattedDate} | {formattedTime}
                   </span>
 
                 </div>
+
               </div>
 
-              {/* RIGHT */}
+              {/* RIGHT SIDE */}
               <div className="flex flex-col items-end gap-2">
+
                 <StatusBadge status={item.status} />
 
                 <p className="text-xs text-gray-400">
                   Reported {formattedDate} | {formattedTime}
                 </p>
+
               </div>
 
             </div>
 
             {/* BODY */}
-            <div className="p-6 space-y-6">
+            <div className="p-6 flex gap-6 flex-wrap">
 
-              {/* IMAGE + DETAILS GRID */}
-              <div className="flex gap-6 flex-wrap">
+            {/* IMAGE */}
+            <div className="w-70 h-70 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex-shrink-0 shadow-sm hover:shadow-md transition">
 
-                {/* IMAGE */}
-                <div className="w-64 h-64 rounded-xl overflow-hidden border border-gray-300 bg-gray-50 flex-shrink-0 shadow-sm">
-                  <img
-                    src={`http://localhost:7002${item.image_path}`}
-                    alt={item.item_name}
-                    className="w-full h-full object-cover hover:scale-110 transition duration-500"
-                  />
-                </div>
+              <img
+                src={`http://localhost:7002${item.image_path}`}
+                alt={item.item_name}
+                className="w-full h-full object-cover hover:scale-150 transition duration-300"
+              />
 
-                {/* TEXT CONTENT */}
-                <div className="flex-1 space-y-6 text-sm">
-
-                  {/* Description + Notes */}
-                  <div className="grid md:grid-cols-2 gap-6">
-
-                    <DetailBlock
-                      title="Item Description"
-                      value={item.description || "No description"}
-                      large
-                    />
-
-                    <DetailBlock
-                      title="Notes"
-                      value={item.notes || "No notes"}
-                      large
-                    />
-
-                  </div>
-
-                  {/* Metadata */}
-                  <div className="grid md:grid-cols-2 gap-6">
-
-                    <DetailBlock
-                      title={item.item_type === "found"
-                        ? "Location Found"
-                        : "Location Lost"}
-                      value={
-                        item.location_found ||
-                        item.location_lost ||
-                        item.location ||
-                        "Not specified"
-                      }
-                    />
-
-                    <DetailBlock
-                      title={item.item_type === "found"
-                        ? "Claim To"
-                        : "Surrender To"}
-                      value={item.claim_to || "Not specified"}
-                    />
-
-                  </div>
-
-                </div>
-              </div>
             </div>
 
-            {/* FOOTER ACTION AREA */}
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-200">
+            {/* DETAILS */}
+            <div className="flex-1 space-y-6 text-sm">
 
+              {/* DESCRIPTION + NOTES IN ONE ROW */}
+              <div className="grid md:grid-cols-2 gap-6">
+
+                <DetailBlock
+                  title="Description"
+                  value={item.description || "No description"}
+                  large
+                />
+
+                <DetailBlock
+                  title="Notes"
+                  value={item.notes || "No notes"}
+                  large
+                />
+
+              </div>
+
+              {/* OTHER DETAILS */}
+              <div className="grid md:grid-cols-2 gap-6">
+
+                <DetailBlock
+                  title={item.item_type === "found" ? "Location Found" : "Location Lost"}
+                  value={
+                    item.location_found ||
+                    item.location_lost ||
+                    item.location ||
+                    "Not specified"
+                  }
+                />
+
+                <DetailBlock
+                  title={item.item_type === "found" ? "Claim To" : "Surrender To"}
+                  value={item.claim_to || "Not specified"}
+                />
+
+              </div>
+
+            </div>
+
+            </div>
+
+            {/* ACTIONS */}
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-200">
               {(item.status === "approved" || item.status === "pending") && (
                 <ActionButton
                   label={item.status === "approved" ? "Unverify" : "Verify"}
@@ -473,7 +460,8 @@ const TableView = ({ items, handleAction }) => {
                 label="Delete"
                 color="bg-red-600 text-white hover:bg-red-700"
                 onClick={() =>
-                  handleAction(item.id, "delete")}
+                  handleAction(item.id, "delete")
+                }
               />
 
             </div>

@@ -53,7 +53,11 @@ export default function LostItemPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    // ✅ Image required validation
+    if (!files.length) {
+      setError("Please upload at least one image.");
+      return;
+    }
     if (files.length > 3) {
       setError("You can upload a maximum of 3 images.");
       return;

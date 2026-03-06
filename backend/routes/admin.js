@@ -131,80 +131,95 @@ const [lostItems] = await db.query(`
 // --------------------------------------------------
 
 router.post("/items/:id/:action", authenticateToken, async (req, res) => {
+
   try {
 
     const { id, action } = req.params;
 
     /*
-    =========================================
-    VERIFY TOGGLE
-    =========================================
+    =====================================
+    Determine Item Table
+    =====================================
+    */
+
+    let table = "FOUND_ITEMS";
+
+    const [[found]] = await db.query(
+      "SELECT id FROM FOUND_ITEMS WHERE id=?",
+      [id]
+    );
+
+    if (!found) {
+      const [[lost]] = await db.query(
+        "SELECT id FROM LOST_ITEMS WHERE id=?",
+        [id]
+      );
+
+      if (lost) table = "LOST_ITEMS";
+      else return res.status(404).json({ message: "Item not found" });
+    }
+
+    /*
+    =====================================
+    GET STATUS
+    =====================================
+    */
+
+    const [[item]] = await db.query(
+      `SELECT status FROM ${table} WHERE id=?`,
+      [id]
+    );
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found"
+      });
+    }
+
+    /*
+    =====================================
+    ACTION HANDLER
+    =====================================
     */
 
     if (action === "verify") {
-
-      const [[item]] = await db.query(
-        "SELECT status FROM FOUND_ITEMS WHERE id=?",
-        [id]
-      );
 
       const newStatus =
         item.status === "approved" ? "pending" : "approved";
 
       await db.query(
-        "UPDATE FOUND_ITEMS SET status=? WHERE id=?",
+        `UPDATE ${table} SET status=? WHERE id=?`,
         [newStatus, id]
       );
     }
-
-    /*
-    =========================================
-    CLAIM TOGGLE
-    =========================================
-    */
 
     else if (action === "claimed") {
 
-      const [[item]] = await db.query(
-        "SELECT status FROM FOUND_ITEMS WHERE id=?",
-        [id]
-      );
-
       const newStatus =
         item.status === "claimed"
-          ? "approved"   // or pending depending on your workflow
+          ? "approved"
           : "claimed";
 
       await db.query(
-        "UPDATE FOUND_ITEMS SET status=? WHERE id=?",
+        `UPDATE ${table} SET status=? WHERE id=?`,
         [newStatus, id]
       );
     }
-
-    /*
-    =========================================
-    DELETE
-    =========================================
-    */
 
     else if (action === "delete") {
 
       await db.query(
-        "DELETE FROM FOUND_ITEMS WHERE id=?",
+        `DELETE FROM ${table} WHERE id=?`,
         [id]
       );
     }
 
-    res.json({
-      success: true
-    });
+    res.json({ success: true });
 
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      success: false
-    });
+    res.status(500).json({ success: false });
   }
 });
 export default router;
