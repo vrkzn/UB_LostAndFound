@@ -236,181 +236,83 @@ router.post("/found",
     }
 );
 
-router.post("/lost", authenticateToken, upload.array("images", 3), async (req, res) => {
-  try {
 
-    const {
-      item_name,
-      category,
-      date_lost,
-      time_lost,
-      location_lost,
-      claim_to,
-      description,
-      notes,
-      isAnonymous
-    } = req.body;
 
-    // ✅ Force user_id from auth middleware
-    const user_id = req.user.id;
-
-    // Validation
-    if (!item_name || !category || !date_lost || !time_lost ||
-        !location_lost || !claim_to || !description) {
-      return res.status(400).json({
-        message: "Please fill in all required fields"
-      });
-    }
-
-    // Insert lost item
-    const insertQuery = `
-      INSERT INTO LOST_ITEMS
-      (user_id, item_name, category, date_lost, time_lost,
-       location_lost, claim_to, description, notes, isAnonymous)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    const [result] = await db.execute(insertQuery, [
-      user_id,
-      item_name,
-      category,
-      date_lost,
-      time_lost,
-      location_lost,
-      claim_to,
-      description,
-      notes || null,
-      isAnonymous === "true" || isAnonymous === true ? 1 : 0
-    ]);
-
-    const lostItemId = result.insertId;
-
-    // ✅ Save images if uploaded
-    if (req.files && req.files.length > 0) {
-
-      const imageQuery = `
-        INSERT INTO LOST_ITEM_IMAGES (lost_item_id, image_path)
-        VALUES (?, ?)
-      `;
-
-      for (const file of req.files) {
-await db.execute(imageQuery, [
-  lostItemId,
-  `/uploads/found_items/${file.filename}`
-]);
-      }
-    }
-
-    res.status(201).json({
-      message: "Lost item reported successfully",
-      id: lostItemId
-    });
-
-  } catch (error) {
-    console.error("Lost Item Backend Error:", error);
-
-    res.status(500).json({
-      message: "Server error while reporting lost item"
-    });
-  }
-});
-
-/*
-====================================================
- Get Items for Student Dashboard
-====================================================
-*/
+// --------------------
+// GET items by type
+// --------------------
 router.get("/:type", authenticateToken, async (req, res) => {
+  try {
+    const { type } = req.params;
 
-    try {
+    if (!["found", "lost"].includes(type)) {
+      return res.status(400).json({ message: "Invalid type" });
+    }
 
-        const { type } = req.params;
+    // Table configuration
+    const config = {
+      found: {
+        table: "FOUND_ITEMS",
+        imageTable: "FOUND_ITEM_IMAGES",
+        foreignKey: "found_item_id",
+        dateColumn: "date_found",
+        timeColumn: "time_found",
+        locationColumn: "location_found",
+      },
+      lost: {
+        table: "LOST_ITEMS",
+        imageTable: "LOST_ITEM_IMAGES",
+        foreignKey: "lost_item_id",
+        dateColumn: "date_lost",
+        timeColumn: "time_lost",
+        locationColumn: "location_lost",
+      },
+    };
 
-        if (!["found", "lost"].includes(type)) {
-            return res.status(400).json({
-                message: "Invalid type"
-            });
-        }
+    const { table, imageTable, foreignKey, dateColumn, timeColumn, locationColumn } = config[type];
 
-        /*
-        =====================================================
-        CONFIGURATION MAP
-        =====================================================
-        */
-
-        const config = {
-            found: {
-                table: "FOUND_ITEMS",
-                imageTable: "FOUND_ITEM_IMAGES",
-                foreignKey: "found_item_id",
-
-                // ✅ Column mapping for FOUND
-                dateColumn: "date_found",
-                timeColumn: "time_found"
-            },
-
-            lost: {
-                table: "LOST_ITEMS",
-                imageTable: "LOST_ITEM_IMAGES",
-                foreignKey: "lost_item_id",
-
-                // ✅ Column mapping for LOST
-                dateColumn: "date_lost",
-                timeColumn: "time_lost"
-            }
-        };
-
-        const { table, imageTable, foreignKey, dateColumn, timeColumn } = config[type];
-
-        /*
-        =====================================================
-        FETCH ITEMS (DYNAMIC COLUMN SELECTION)
-        =====================================================
-        */
-
-const [rows] = await db.query(`
-    SELECT 
+    // Fetch approved items only from the correct table
+    const [rows] = await db.query(`
+      SELECT 
         i.id,
         i.item_name,
         i.category,
         i.description,
-
         i.${dateColumn} AS date_value,
         i.${timeColumn} AS time_value,
-
-        -- ✅ combine date + time into one field
         CONCAT(i.${dateColumn}, ' ', i.${timeColumn}) AS datetime_value,
-
-        i.location_${type === "found" ? "found" : "lost"} AS location,
-
+        i.${locationColumn} AS location,
         i.claim_to,
         i.notes,
         i.isAnonymous,
         i.status,
         i.created_at,
+        u.name AS uploader_name
+      FROM ${table} i
+      JOIN USERS u ON u.id = i.user_id
+      WHERE i.status = 'approved'
+      ORDER BY i.created_at DESC
+    `);
 
-        (
-            SELECT image_path
-            FROM ${imageTable}
-            WHERE ${foreignKey} = i.id
-            LIMIT 1
-        ) AS image_path
+// Fetch all images for each item
+const itemsWithImages = await Promise.all(
+  rows.map(async (item) => {
+    const [images] = await db.query(
+      `SELECT image_path FROM ${imageTable} WHERE ${foreignKey} = ? ORDER BY ${
+        type === "found" ? "uploaded_at" : "created_at"
+      } ASC`,
+      [item.id]
+    );
+    return { ...item, images: images.map(img => img.image_path) };
+  })
+);
 
-    FROM ${table} i
-    WHERE i.status = 'approved'
-    ORDER BY i.created_at DESC
-`);
+    res.json(itemsWithImages);
 
-        return res.json(rows);
-
-    } catch (error) {
-
-        console.error("Fetch Items Error:", error);
-
-        return res.status(500).json({
-            message: "Server error"
-        });
-    }
+  } catch (err) {
+    console.error("Fetch Items Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 export default router;

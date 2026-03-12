@@ -1,112 +1,131 @@
-import { X } from "lucide-react";
+import { X, Calendar, MapPin, User, Tag, Clipboard } from "lucide-react";
 
-
-function ReportDetails({ show, onClose, item }) {
-
-
+function ReportDetails({ show, onClose, item, type }) {
   if (!show || !item) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
+  const formatDateTime = (datetime) => {
+    if (!datetime) return "N/A";
+    return new Date(datetime.replace(" ", "T")).toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 max-h-[85vh] overflow-y-auto">
+  const dateLabel = type === "found" ? "Date Found" : "Date Lost";
+  const locationLabel = type === "found" ? "Location Found" : "Location Lost";
+
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto animate-slide-in">
 
         {/* Header */}
-        <div className="flex justify-between items-center border-b pb-3 mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Found Item Details
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 pb-4 mb-6 gap-2">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {type === "found" ? "Found Item Details" : "Lost Item Details"}
           </h2>
 
           <button
             onClick={onClose}
-            className="hover:bg-gray-200 p-1 rounded-lg transition"
+            className="hover:bg-gray-100 p-2 rounded-full transition self-start sm:self-auto"
           >
-            <X size={18}/>
+            <X size={22} />
           </button>
         </div>
 
-        {/* Image */}
-        {item.image_path && (
-          <img
-            src={`http://localhost:7002${item.image_path}`}
-            alt={item.item_name}
-            className="w-full h-60 object-cover rounded-xl mb-4"
-          />
+        {/* Reported By */}
+        <div className="flex items-center gap-2 mb-6">
+          <User size={20} className="text-gray-500" />
+          <p className="text-gray-800">
+            <span className="font-semibold">Reported By:</span>{" "}
+            {item.isAnonymous ? "Anonymous" : item.uploader_name || "N/A"}
+          </p>
+        </div>
+
+        {/* Images */}
+        {item.images && item.images.length > 0 && (
+          <div className="mb-6 flex gap-3 justify-center">
+            {item.images.map((img, idx) => (
+              <div
+                key={idx}
+                className={`rounded-xl overflow-hidden shadow-lg ${
+                  item.images.length === 1
+                    ? "w-full max-w-lg"
+                    : item.images.length === 2
+                    ? "w-1/2"
+                    : "w-1/3"
+                }`}
+              >
+                <img
+                  src={`http://localhost:7002${img}`}
+                  alt={`${item.item_name} ${idx + 1}`}
+                  className="w-full h-64 object-contain"
+                />
+              </div>
+            ))}
+          </div>
         )}
 
-        {/* Details Grid */}
-        <div className="space-y-3 text-gray-700 text-sm">
+        {/* Core Info */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-gray-700">
+          <div className="flex items-center gap-2">
+            <Tag size={20} className="text-gray-500" />
+            <span className="font-semibold text-gray-800">Item Name:</span>
+            <span>{item.item_name || "N/A"}</span>
+          </div>
 
-          <p><span className="font-semibold">Item Name:</span> {item.item_name || "N/A"}</p>
+          <div className="flex items-center gap-2">
+            <Clipboard size={20} className="text-gray-500" />
+            <span className="font-semibold text-gray-800">Category:</span>
+            <span>{item.category || "N/A"}</span>
+          </div>
 
-          <p><span className="font-semibold">Category:</span> {item.category || "N/A"}</p>
+          <div className="flex items-center gap-2">
+            <Calendar size={20} className="text-gray-500" />
+            <span className="font-semibold text-gray-800">{dateLabel}:</span>
+            <span>{formatDateTime(item.datetime_value)}</span>
+          </div>
 
-<p>
-  <span className="font-semibold">Date Found:</span>{" "}
-  {item.datetime_value
-    ? new Date(item.datetime_value.replace(" ", "T")).toLocaleString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      })
-    : "N/A"}
-</p>
+          <div className="flex items-center gap-2">
+            <MapPin size={20} className="text-gray-500" />
+            <span className="font-semibold text-gray-800">{locationLabel}:</span>
+            <span>{item.location || "N/A"}</span>
+          </div>
 
-<p>
-  <span className="font-semibold">Location Found:</span>{" "}
-  {item.location || "N/A"}
-</p>
+          <div className="flex items-center gap-2">
+            <Calendar size={20} className="text-gray-500" />
+            <span className="font-semibold text-gray-800">Reported At:</span>
+            <span>{formatDateTime(item.created_at)}</span>
+          </div>
 
-          <p>
-            <span className="font-semibold">Claim To:</span>{" "}
-            {item.claim_to || "N/A"}
-          </p>
+          <div className="flex items-center gap-2">
+            <User size={20} className="text-gray-500" />
+            <span className="font-semibold text-gray-800">Claim To:</span>
+            <span>{item.claim_to || "N/A"}</span>
+          </div>
+        </div>
 
-          <p>
-            <span className="font-semibold">Description:</span>{" "}
-            {item.description || "No description"}
-          </p>
+        {/* Description & Notes */}
+        <div className="mt-6 space-y-4">
+          <div className="bg-gray-50 p-4 rounded-xl shadow-sm">
+            <h3 className="font-semibold text-gray-800 mb-2">Description</h3>
+            <p className="text-gray-600">{item.description || "No description"}</p>
+          </div>
 
-          <p>
-            <span className="font-semibold">Notes:</span>{" "}
-            {item.notes || "N/A"}
-          </p>
-
-          <p>
-            <span className="font-semibold">Reported by</span>{" "}
-            {item.isAnonymous ? "Yes" : "No"}
-          </p>
-
-          <p>
-            <span className="font-semibold">Status:</span>{" "}
-            <span className={`px-2 py-1 rounded-lg text-xs ${
-              item.status === "approved"
-                ? "bg-green-100 text-green-700"
-                : item.status === "claimed"
-                ? "bg-blue-100 text-blue-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}>
-              {item.status || "pending"}
-            </span>
-          </p>
-
-          <p>
-            <span className="font-semibold">Created At:</span>{" "}
-            {item.created_at
-            ? new Date(item.created_at).toLocaleString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true
-                })
-            : "N/A"}
-          </p>
-
+          <div className="bg-gray-50 p-4 rounded-xl shadow-sm">
+            <h3 className="font-semibold text-gray-800 mb-2">Notes</h3>
+            <p className="text-gray-600">{item.notes || "N/A"}</p>
+          </div>
         </div>
 
       </div>
