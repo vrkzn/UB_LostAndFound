@@ -368,35 +368,38 @@ router.get("/:type", authenticateToken, async (req, res) => {
         =====================================================
         */
 
-        const [rows] = await db.query(`
-            SELECT 
-                i.id,
-                i.item_name,
-                i.category,
-                i.description,
+const [rows] = await db.query(`
+    SELECT 
+        i.id,
+        i.item_name,
+        i.category,
+        i.description,
 
-                i.${dateColumn} AS date_value,
-                i.${timeColumn} AS time_value,
+        i.${dateColumn} AS date_value,
+        i.${timeColumn} AS time_value,
 
-                i.location_${type === "found" ? "found" : "lost"} AS location,
+        -- ✅ combine date + time into one field
+        CONCAT(i.${dateColumn}, ' ', i.${timeColumn}) AS datetime_value,
 
-                i.claim_to,
-                i.notes,
-                i.isAnonymous,
-                i.status,
-                i.created_at,
+        i.location_${type === "found" ? "found" : "lost"} AS location,
 
-                (
-                    SELECT image_path
-                    FROM ${imageTable}
-                    WHERE ${foreignKey} = i.id
-                    LIMIT 1
-                ) AS image_path
+        i.claim_to,
+        i.notes,
+        i.isAnonymous,
+        i.status,
+        i.created_at,
 
-            FROM ${table} i
-            WHERE i.status = 'approved'
-            ORDER BY i.created_at DESC
-        `);
+        (
+            SELECT image_path
+            FROM ${imageTable}
+            WHERE ${foreignKey} = i.id
+            LIMIT 1
+        ) AS image_path
+
+    FROM ${table} i
+    WHERE i.status = 'approved'
+    ORDER BY i.created_at DESC
+`);
 
         return res.json(rows);
 

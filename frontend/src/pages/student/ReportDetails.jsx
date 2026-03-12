@@ -1,26 +1,5 @@
 import { X } from "lucide-react";
 
-function formatDateTime(dateValue, timeValue) {
-  if (!dateValue) return "N/A";
-
-  const datetime = timeValue
-    ? `${dateValue} ${timeValue}`
-    : dateValue;
-
-  const dateObj = new Date(datetime);
-
-  if (isNaN(dateObj.getTime())) return "N/A";
-
-  return dateObj.toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  });
-}
-
 
 function ReportDetails({ show, onClose, item }) {
 
@@ -64,7 +43,16 @@ function ReportDetails({ show, onClose, item }) {
 
 <p>
   <span className="font-semibold">Date Found:</span>{" "}
-{formatDateTime(item.date_value, item.time_value)}
+  {item.datetime_value
+    ? new Date(item.datetime_value.replace(" ", "T")).toLocaleString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    : "N/A"}
 </p>
 
 <p>
@@ -88,7 +76,7 @@ function ReportDetails({ show, onClose, item }) {
           </p>
 
           <p>
-            <span className="font-semibold">Anonymous:</span>{" "}
+            <span className="font-semibold">Reported by</span>{" "}
             {item.isAnonymous ? "Yes" : "No"}
           </p>
 
