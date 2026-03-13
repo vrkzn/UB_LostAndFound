@@ -17,7 +17,10 @@ export default function AdminDashboard() {
 
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
-  const [search, setSearch] = useState("");
+const [searchInput, setSearchInput] = useState(""); // input box value
+const [search, setSearch] = useState("");           // actual filter applied
+  const [statusFilter, setStatusFilter] = useState("all"); // all, approved, pending, claimed
+
   const [loading, setLoading] = useState(true);
 
   // CLAIM MODAL STATE
@@ -134,18 +137,37 @@ const submitClaim = async () => {
 ===================================================== */
 const filteredItems = useMemo(() => {
   return items.filter(item => {
-    let matchType = false;
+    // Status filter
+    const matchStatus = statusFilter === "all" || item.status === statusFilter;
 
-    if (activeTab === "all") matchType = true;
-    else if (activeTab === "found") matchType = item.item_type === "found" && item.status !== "claimed";
-    else if (activeTab === "lost") matchType = item.item_type === "lost" && item.status !== "claimed";
-    else if (activeTab === "claimed") matchType = item.status === "claimed";
+    // Tab filter
+    let matchTab = false;
+    if (activeTab === "all") matchTab = true;
+    else if (activeTab === "found") matchTab = item.item_type === "found" && item.status !== "claimed";
+    else if (activeTab === "lost") matchTab = item.item_type === "lost" && item.status !== "claimed";
+    else if (activeTab === "claimed") matchTab = item.status === "claimed";
 
-    const matchSearch = item.item_name?.toLowerCase().includes(search.toLowerCase());
+    // Live search across multiple fields
+    const searchTerm = searchInput.toLowerCase();
+    const fieldsToSearch = [
+      item.item_name,
+      item.description,
+      item.notes,
+      item.reporter_name,
+      item.location_found,
+      item.location_lost,
+      item.location,
+      item.claim_to,
+      item.claimed_by
+    ];
 
-    return matchType && matchSearch;
+    const matchSearch = fieldsToSearch.some(
+      field => field && field.toLowerCase().includes(searchTerm)
+    );
+
+    return matchStatus && matchTab && matchSearch;
   });
-}, [items, activeTab, search]);
+}, [items, activeTab, searchInput, statusFilter]);
 
 /* =====================================================
    TAB COUNTS
@@ -154,6 +176,9 @@ const tabCounts = useMemo(() => {
   const counts = { all: 0, found: 0, lost: 0, claimed: 0 };
 
   items.forEach(item => {
+    // Skip items that don't match the status filter
+    if (statusFilter !== "all" && item.status !== statusFilter) return;
+
     counts.all += 1;
     if (item.item_type === "found" && item.status !== "claimed") counts.found += 1;
     if (item.item_type === "lost" && item.status !== "claimed") counts.lost += 1;
@@ -161,7 +186,7 @@ const tabCounts = useMemo(() => {
   });
 
   return counts;
-}, [items]);
+}, [items, statusFilter]);
   return (
     <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 space-y-8">
 
@@ -198,16 +223,28 @@ const tabCounts = useMemo(() => {
 
       {/* MANAGEMENT PANEL */}
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-8 space-y-6">
-        <div className="flex flex-wrap justify-between gap-4 items-center">
-          <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-            <Archive size={22} /> Reports Management
-          </h2>
-          <SearchBar search={search} setSearch={setSearch} />
-        </div>
+<div className="flex flex-wrap justify-between gap-4 items-center">
+  <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+    <Archive size={22} /> Reports Management
+  </h2>
+<div className="flex items-center gap-4 mb-4">
+  <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-400/30"
+  >
+    <option value="all">All Status</option>
+    <option value="approved">Approved</option>
+    <option value="pending">Pending</option>
+    <option value="claimed">Claimed</option>
+  </select>
+
+  <SearchBar searchInput={searchInput} setSearchInput={setSearchInput} />
+  </div>
+</div>
 
         {/* TABS */}
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabCounts={tabCounts} />
-
         <TableView items={filteredItems} handleAction={handleAction} />
       </div>
 
@@ -281,10 +318,15 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
-const SearchBar = ({ search, setSearch }) => (
-  <div className="flex items-center gap-3 bg-gray-50 border border-black-1500 rounded-xl px-5 py-3 w-full md:w-96 focus-within:ring-2 focus-within:ring-blue-400/30 transition">
-    <Search size={18} className="text-gray-400"/>
-    <input placeholder="Search reports..." value={search} onChange={e => setSearch(e.target.value)} className="bg-transparent outline-none text-sm w-full"/>
+const SearchBar = ({ searchInput, setSearchInput }) => (
+  <div className="flex gap-2 w-full md:w-96">
+    <input
+      type="text"
+      placeholder="Search reports..."
+      value={searchInput}
+      onChange={e => setSearchInput(e.target.value)}
+      className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm w-full focus:outline-none"
+    />
   </div>
 );
 
@@ -326,6 +368,7 @@ const TableView = ({ items, handleAction }) => {
     </div>
   );
 
+ 
   return (
     <div className="space-y-8">
       {items.map(item => {
