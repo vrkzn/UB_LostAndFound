@@ -239,11 +239,12 @@ router.post("/found",
 
 
 // --------------------
-// GET items by type
+// GET items by type with filters
 // --------------------
 router.get("/:type", authenticateToken, async (req, res) => {
   try {
     const { type } = req.params;
+    const { search, category, date } = req.query; // filters from frontend
 
     if (!["found", "lost"].includes(type)) {
       return res.status(400).json({ message: "Invalid type" });
@@ -271,7 +272,28 @@ router.get("/:type", authenticateToken, async (req, res) => {
 
     const { table, imageTable, foreignKey, dateColumn, timeColumn, locationColumn } = config[type];
 
-    // Fetch approved items only from the correct table
+    // Build dynamic WHERE conditions
+    const whereClauses = ["i.status = 'approved'"];
+    const params = [];
+
+    if (search) {
+      whereClauses.push("i.item_name LIKE ?");
+      params.push(`%${search}%`);
+    }
+
+    if (category) {
+      whereClauses.push("i.category = ?");
+      params.push(category);
+    }
+
+    if (date) {
+      whereClauses.push(`i.${dateColumn} = ?`);
+      params.push(date);
+    }
+
+    const whereSQL = whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : "";
+
+    // Fetch items with filters applied
     const [rows] = await db.query(`
       SELECT 
         i.id,
@@ -290,22 +312,24 @@ router.get("/:type", authenticateToken, async (req, res) => {
         u.name AS uploader_name
       FROM ${table} i
       JOIN USERS u ON u.id = i.user_id
-      WHERE i.status = 'approved'
+      ${whereSQL}
       ORDER BY i.created_at DESC
-    `);
+    `, params);
 
-// Fetch all images for each item
-const itemsWithImages = await Promise.all(
-  rows.map(async (item) => {
-    const [images] = await db.query(
-      `SELECT image_path FROM ${imageTable} WHERE ${foreignKey} = ? ORDER BY ${
-        type === "found" ? "uploaded_at" : "created_at"
-      } ASC`,
-      [item.id]
+    // Fetch all images for each item
+    const itemsWithImages = await Promise.all(
+    rows.map(async (item) => {
+        // choose correct column for ordering images
+        const orderColumn = type === "found" ? "uploaded_at" : "created_at";
+
+        const [images] = await db.query(
+        `SELECT image_path FROM ${imageTable} WHERE ${foreignKey} = ? ORDER BY ${orderColumn} ASC`,
+        [item.id]
+        );
+
+        return { ...item, images: images.map(img => img.image_path) };
+    })
     );
-    return { ...item, images: images.map(img => img.image_path) };
-  })
-);
 
     res.json(itemsWithImages);
 

@@ -22,6 +22,11 @@ function ReportDetails({ show, onClose, item, type }) {
     if (e.target === e.currentTarget) onClose();
   };
 
+  const capitalizeFirst = (text) => {
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4"
@@ -29,28 +34,33 @@ function ReportDetails({ show, onClose, item, type }) {
     >
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto animate-slide-in">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 pb-4 mb-6 gap-2">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {type === "found" ? "Found Item Details" : "Lost Item Details"}
-          </h2>
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+      <h2 className="text-2xl font-bold text-gray-900">
+        {type === "found" ? "Found Item Details" : "Lost Item Details"}
+      </h2>
 
-          <button
-            onClick={onClose}
-            className="hover:bg-gray-100 p-2 rounded-full transition self-start sm:self-auto"
-          >
-            <X size={22} />
-          </button>
-        </div>
+      <button
+        onClick={onClose}
+        className="hover:bg-gray-100 p-2 rounded-full transition self-start sm:self-auto"
+      >
+        <X size={22} />
+      </button>
+    </div>
 
-        {/* Reported By */}
-        <div className="flex items-center gap-2 mb-6">
-          <User size={20} className="text-gray-500" />
-          <p className="text-gray-800">
-            <span className="font-semibold">Reported By:</span>{" "}
-            {item.isAnonymous ? "Anonymous" : item.uploader_name || "N/A"}
-          </p>
-        </div>
+    {/* Reported By */}
+    <div className="flex items-center gap-2 mb-4">
+      <User size={20} className="text-gray-500" />
+      <p className="text-gray-800">
+        <span className="font-semibold">Reported By:</span>{" "}
+        {item.isAnonymous
+          ? "Anonymous"
+          : capitalizeFirst(item.uploader_name) || "N/A"}
+      </p>
+    </div>
+
+{/* Divider */}
+<div className="border-b border-gray-200 mb-6"></div>
 
         {/* Images */}
         {item.images && item.images.length > 0 && (
@@ -81,13 +91,13 @@ function ReportDetails({ show, onClose, item, type }) {
           <div className="flex items-center gap-2">
             <Tag size={20} className="text-gray-500" />
             <span className="font-semibold text-gray-800">Item Name:</span>
-            <span>{item.item_name || "N/A"}</span>
+            <span>{capitalizeFirst(item.item_name) || "N/A"}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <Clipboard size={20} className="text-gray-500" />
             <span className="font-semibold text-gray-800">Category:</span>
-            <span>{item.category || "N/A"}</span>
+            <span>{capitalizeFirst(item.category) || "N/A"}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -99,7 +109,7 @@ function ReportDetails({ show, onClose, item, type }) {
           <div className="flex items-center gap-2">
             <MapPin size={20} className="text-gray-500" />
             <span className="font-semibold text-gray-800">{locationLabel}:</span>
-            <span>{item.location || "N/A"}</span>
+            <span>{capitalizeFirst(item.location) || "N/A"}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -111,7 +121,7 @@ function ReportDetails({ show, onClose, item, type }) {
           <div className="flex items-center gap-2">
             <User size={20} className="text-gray-500" />
             <span className="font-semibold text-gray-800">Claim To:</span>
-            <span>{item.claim_to || "N/A"}</span>
+            <span>{capitalizeFirst(item.claim_to) || "N/A"}</span>
           </div>
         </div>
 
@@ -119,12 +129,16 @@ function ReportDetails({ show, onClose, item, type }) {
         <div className="mt-6 space-y-4">
           <div className="bg-gray-50 p-4 rounded-xl shadow-sm">
             <h3 className="font-semibold text-gray-800 mb-2">Description</h3>
-            <p className="text-gray-600">{item.description || "No description"}</p>
+            <p className="text-gray-600">
+              {capitalizeFirst(item.description) || "No description"}
+            </p>
           </div>
 
           <div className="bg-gray-50 p-4 rounded-xl shadow-sm">
             <h3 className="font-semibold text-gray-800 mb-2">Notes</h3>
-            <p className="text-gray-600">{item.notes || "N/A"}</p>
+            <p className="text-gray-600">
+              {capitalizeFirst(item.notes) || "N/A"}
+            </p>
           </div>
         </div>
 

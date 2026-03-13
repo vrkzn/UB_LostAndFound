@@ -11,12 +11,22 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // Fetch items based on type
+  // Filter states
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+
+  // Fetch items based on type and filters
   const fetchItems = async (type) => {
     setLoading(true);
     setItems([]); // clear previous items immediately
     try {
-      const res = await api.get(`/items/${type}`);
+      const params = {};
+      if (searchKeyword) params.search = searchKeyword;
+      if (categoryFilter) params.category = categoryFilter;
+      if (dateFilter) params.date = dateFilter;
+
+      const res = await api.get(`/items/${type}`, { params });
       setItems(res.data);
     } catch (err) {
       console.error(err);
@@ -31,25 +41,61 @@ export default function Dashboard() {
     fetchItems(tab);
   };
 
+  // Re-fetch items whenever filters change
   useEffect(() => {
-    // fetch items initially for default tab
+    fetchItems(activeTab);
+  }, [searchKeyword, categoryFilter, dateFilter]);
+
+  // Initial fetch
+  useEffect(() => {
     fetchItems(activeTab);
   }, []);
+
+  const capitalizeFirst = (text) => {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans flex flex-col">
       <main className="flex-grow">
         {/* Search & Filters */}
         <div className="bg-gray-100 p-5 flex flex-col md:flex-row items-center justify-center gap-3 border-b">
+          {/* Search */}
           <div className="relative w-full md:w-72">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
             <input
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="Search by keyword..."
               className="pl-10 pr-3 py-2 w-full rounded-xl border focus:outline-none focus:ring-2 focus:ring-red-200 transition"
             />
           </div>
-          <select className="p-2 rounded-xl border w-full md:w-40"><option>Category</option></select>
-          <select className="p-2 rounded-xl border w-full md:w-32"><option>Date</option></select>
+
+          {/* Category Filter */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="p-2 rounded-xl border w-full md:w-40"
+          >
+            <option value="">Select Category</option>
+            <option value="electronics">Electronics</option>
+            <option value="accessories">Accessories</option>
+            <option value="documents">Documents</option>
+            <option value="others">Others</option>
+          </select>
+
+          {/* Date Filter */}
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="p-2 rounded-xl border w-full md:w-32"
+          />
         </div>
 
         {/* Report Buttons */}
@@ -93,26 +139,29 @@ export default function Dashboard() {
             {!loading && items.length === 0 && (
               <p className="text-center text-gray-400 col-span-full">No items to display</p>
             )}
-            {items.map(item => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedItem(item)}
-                className="bg-white p-5 rounded-2xl shadow-md flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer"
-              >
-                <div className="w-full h-40 bg-gray-200 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
-                  {item.images?.length > 0 ? (
-                    <img
-                      src={`http://localhost:7002${item.images[0]}`}
-                      alt={item.item_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <p className="text-gray-400 text-sm">No image</p>
-                  )}
-                </div>
-                <p className="font-medium text-gray-700 text-center">{item.item_name}</p>
-              </div>
-            ))}
+{items.map(item => (
+  <div
+    key={item.id}
+    onClick={() => setSelectedItem(item)}
+    className="bg-white p-5 rounded-2xl shadow-md flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer"
+  >
+    <div className="w-full h-40 bg-gray-200 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+      {item.images?.length > 0 ? (
+        <img
+          src={`http://localhost:7002${item.images[0]}`}
+          alt={capitalizeFirst(item.item_name)}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <p className="text-gray-400 text-sm">No image</p>
+      )}
+    </div>
+
+    <p className="font-medium text-gray-700 text-center">
+      {capitalizeFirst(item.item_name)}
+    </p>
+  </div>
+))}
           </div>
         </div>
 
