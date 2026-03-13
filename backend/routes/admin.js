@@ -2,8 +2,8 @@ import express from "express";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import db from "../db.js";
 
-const router = express.Router();
 
+const router = express.Router();
 router.get("/dashboard", authenticateToken, async (req, res) => {
 
   try {
@@ -194,18 +194,35 @@ router.post("/items/:id/:action", authenticateToken, async (req, res) => {
       );
     }
 
-    else if (action === "claimed") {
+else if (action === "claimed") {
 
-      const newStatus =
-        item.status === "claimed"
-          ? "approved"
-          : "claimed";
+  if (item.status === "claimed") {
 
-      await db.query(
-        `UPDATE ${table} SET status=? WHERE id=?`,
-        [newStatus, id]
-      );
-    }
+    await db.query(
+      `UPDATE ${table} 
+       SET status='approved',
+           claimed_by=NULL,
+           claim_datetime=NULL
+       WHERE id=?`,
+      [id]
+    );
+
+  } else {
+
+    const { claimed_by, claim_datetime } = req.body;
+
+    await db.query(
+      `UPDATE ${table}
+       SET status='claimed',
+           claimed_by=?,
+           claim_datetime=?
+       WHERE id=?`,
+      [claimed_by, claim_datetime, id]
+    );
+
+  }
+
+}
 
     else if (action === "delete") {
 
@@ -219,6 +236,41 @@ router.post("/items/:id/:action", authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error(error);
+    res.status(500).json({ success: false });
+  }
+});
+
+// backend/routes/admin.js
+router.post("/items/:id/claimed", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { claimed_by, claim_datetime } = req.body; // sent from frontend
+
+  try {
+    if (!claimed_by || !claim_datetime) {
+      // Unclaim: clear claimed_by and claim_datetime, set status to approved
+      await db.query(
+        `UPDATE FOUND_ITEMS
+         SET status='approved',
+             claimed_by=NULL,
+             claim_datetime=NULL
+         WHERE id=?`,
+        [id]
+      );
+    } else {
+      // Claim: update with user info and datetime
+      await db.query(
+        `UPDATE FOUND_ITEMS
+         SET status='claimed',
+             claimed_by=?,
+             claim_datetime=?
+         WHERE id=?`,
+        [claimed_by, claim_datetime, id]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false });
   }
 });

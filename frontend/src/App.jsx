@@ -8,6 +8,7 @@ import ReportFoundItems from "./pages/student/ReportFoundItems.jsx";
 import ReportLostItems from "./pages/student/ReportLostItems.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import ReportDetails from "./pages/student/ReportDetails.jsx";
+import ClaimModal from "./pages/admin/ClaimModal.jsx";
 
 
 
@@ -33,6 +34,7 @@ function App() {
           </Route>
             <Route element={<Layout />}>
             <Route path="/admindashboard" element={<AdminDashboard />} />
+            <Route path="/claimmodal" element={<ClaimModal />} />
           </Route>
 
         </Route>
