@@ -129,6 +129,9 @@ const submitClaim = async () => {
   /* =====================================================
      FILTER LOGIC
   ===================================================== */
+/* =====================================================
+   FILTER LOGIC
+===================================================== */
 const filteredItems = useMemo(() => {
   return items.filter(item => {
     let matchType = false;
@@ -144,8 +147,21 @@ const filteredItems = useMemo(() => {
   });
 }, [items, activeTab, search]);
 
-  if (loading) return <LoadingSkeleton />;
+/* =====================================================
+   TAB COUNTS
+===================================================== */
+const tabCounts = useMemo(() => {
+  const counts = { all: 0, found: 0, lost: 0, claimed: 0 };
 
+  items.forEach(item => {
+    counts.all += 1;
+    if (item.item_type === "found" && item.status !== "claimed") counts.found += 1;
+    if (item.item_type === "lost" && item.status !== "claimed") counts.lost += 1;
+    if (item.status === "claimed") counts.claimed += 1;
+  });
+
+  return counts;
+}, [items]);
   return (
     <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 space-y-8">
 
@@ -190,7 +206,7 @@ const filteredItems = useMemo(() => {
         </div>
 
         {/* TABS */}
-        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabCounts={tabCounts} />
 
         <TableView items={filteredItems} handleAction={handleAction} />
       </div>
@@ -272,16 +288,16 @@ const SearchBar = ({ search, setSearch }) => (
   </div>
 );
 
-const Tabs = ({ activeTab, setActiveTab }) => (
+const Tabs = ({ activeTab, setActiveTab, tabCounts }) => (
   <div className="flex gap-12 border-b text-base font-medium">
     {["all", "found", "lost", "claimed"].map(tab => (
       <TabButton
         key={tab}
         label={
-          tab === "all" ? "All Items" :
-          tab === "found" ? "Found Items" :
-          tab === "lost" ? "Lost Items" :
-          "Claimed Items"
+          tab === "all" ? `All Items (${tabCounts.all})` :
+          tab === "found" ? `Found Items (${tabCounts.found})` :
+          tab === "lost" ? `Lost Items (${tabCounts.lost})` :
+          `Claimed Items (${tabCounts.claimed})`
         }
         active={activeTab === tab}
         onClick={() => setActiveTab(tab)}
