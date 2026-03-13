@@ -13,6 +13,7 @@ export default function AdminDashboard() {
     totalFound: 0,
     totalUnclaimed: 0
   });
+  
 
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
@@ -49,15 +50,17 @@ export default function AdminDashboard() {
      HANDLE ACTIONS (VERIFY, CLAIMED, DELETE)
   ===================================================== */
   const handleAction = async (id, action, currentStatus) => {
-  if (action === "claimed") {
+if (action === "claimed") {
     const item = items.find(i => i.id === id);
 
     if (currentStatus === "claimed") {
       if (!window.confirm("Mark this item as unclaimed?")) return;
 
       try {
-        // Unclaim: send nulls to backend
-        await api.post(`/admin/items/${id}/claimed`, { claimed_by: null, claim_datetime: null });
+        await api.post(`/admin/items/${id}/claimed`, {
+          claimed_by: null,
+          claim_datetime: null,
+        });
         fetchDashboard();
       } catch (err) {
         console.error(err);
@@ -66,11 +69,11 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Open modal for claiming
     setClaimItem(item);
     setShowClaimModal(true);
     return;
   }
+
 
     let promptMessage = "";
     if (action === "verify") {
@@ -100,25 +103,26 @@ export default function AdminDashboard() {
   /* =====================================================
      SUBMIT CLAIM
   ===================================================== */
-  const submitClaim = async () => {
-    if (!claimedBy || !claimedDate || !claimedTime) {
-      alert("Please complete all fields.");
-      return;
-    }
-    try {
-      await api.post(`/admin/items/${claimItem.id}/claimed`, {
-        claimed_by: claimedBy,
-        claim_datetime: `${claimedDate} ${claimedTime}`,
-      });
-      alert("Item claimed successfully!");
-      setShowClaimModal(false);
-      setClaimedBy(""); setClaimedDate(""); setClaimedTime(""); setClaimItem(null);
-      fetchDashboard();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to claim item.");
-    }
-  };
+const submitClaim = async () => {
+  if (!claimedBy || !claimedDate || !claimedTime) {
+    alert("Please complete all fields.");
+    return;
+  }
+
+  try {
+    await api.post(`/admin/items/${claimItem.id}/claimed`, {
+      claimed_by: claimedBy,
+      claim_datetime: `${claimedDate} ${claimedTime}`,
+    });
+    alert("Item claimed successfully!");
+    setShowClaimModal(false);
+    setClaimedBy(""); setClaimedDate(""); setClaimedTime(""); setClaimItem(null);
+    fetchDashboard();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to claim item.");
+  }
+};
 
   useEffect(() => { fetchDashboard(); }, []);
 
@@ -149,11 +153,32 @@ const filteredItems = useMemo(() => {
       <Header />
 
       {/* STATS GRID */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <StatCard title="Total Lost Reports" value={stats.totalLost} icon={<FileWarning />} color="from-red-50 to-red-100 text-red-600" />
-        <StatCard title="Total Found Reports" value={stats.totalFound} icon={<CheckCircle />} color="from-green-50 to-green-100 text-green-600" />
-        <StatCard title="Unclaimed Items" value={stats.totalUnclaimed} icon={<Archive />} color="from-blue-50 to-blue-100 text-blue-600" />
-      </div>
+<div className="grid md:grid-cols-4 gap-6">
+  <StatCard
+    title="Total Lost Reports"
+    value={stats.totalLost}
+    icon={<FileWarning />}
+    color="from-red-50 to-red-100 text-red-600"
+  />
+  <StatCard
+    title="Total Found Reports"
+    value={stats.totalFound}
+    icon={<CheckCircle />}
+    color="from-green-50 to-green-100 text-green-600"
+  />
+  <StatCard
+    title="Unclaimed Items"
+    value={stats.totalUnclaimed}
+    icon={<Archive />}
+    color="from-blue-50 to-blue-100 text-blue-600"
+  />
+  <StatCard
+    title="Claimed Items"
+    value={stats.totalClaimed}
+    icon={<CheckCircle />}
+    color="from-indigo-50 to-indigo-100 text-indigo-600"
+  />
+</div>
 
       {/* MANAGEMENT PANEL */}
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-8 space-y-6">
@@ -306,6 +331,26 @@ const TableView = ({ items, handleAction }) => {
               <div className="flex flex-col items-end gap-2">
                 <StatusBadge status={item.status} />
                 <p className="text-xs text-gray-400">Reported {formattedDate} | {formattedTime}</p>
+
+                {/* Claimed Details (if item is claimed) */}
+                {item.status === "claimed" && (
+                  <div className="text-xs text-blue-600 mt-1 text-right">
+                    <p>Claimed By: {item.claimed_by || "Unknown"}</p>
+                    <p>
+                      Claimed Date:{" "}
+                      {item.claim_datetime
+                        ? new Date(item.claim_datetime).toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                        : "N/A"}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -325,6 +370,7 @@ const TableView = ({ items, handleAction }) => {
                 </div>
               </div>
             </div>
+            
 
             <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-200">
               {(item.status==="approved" || item.status==="pending") && (
@@ -335,7 +381,7 @@ const TableView = ({ items, handleAction }) => {
                 label={item.status==="claimed"?"Unclaim":"Claim"}
                 color="border border-blue-600 text-blue-600 hover:bg-blue-50"
                 outline
-                onClick={() => handleAction(item.id,"claimed",item.status)}
+                onClick={() => handleAction(item.id,"claimed",item.status,item.item_type)}
               />
 
               <ActionButton label="Delete" color="bg-red-600 text-white hover:bg-red-700" onClick={() => handleAction(item.id,"delete")} />
@@ -355,8 +401,21 @@ const DetailBlock = ({ title, value, large }) => (
 );
 
 const StatusBadge = ({ status }) => {
-  const map = { approved:"bg-green-100 text-green-700", pending:"bg-yellow-100 text-yellow-700", claimed:"bg-blue-100 text-blue-700" };
-  return <span className={`px-3 py-1 text-small rounded-full font-semibold ${map[status] || "bg-gray-100 text-gray-600"}`}>{status || "unknown"}</span>;
+  const map = {
+    approved: "bg-green-100 text-green-700",
+    pending: "bg-yellow-100 text-yellow-700",
+    claimed: "bg-blue-100 text-blue-700"
+  };
+  const labels = {
+    approved: "Approved",
+    pending: "Pending",
+    claimed: "Claimed"
+  };
+  return (
+    <span className={`px-3 py-1 text-sm rounded-full font-semibold ${map[status] || "bg-gray-100 text-gray-600"}`}>
+      {labels[status] || "Unknown"}
+    </span>
+  );
 };
 
 const ActionButton = ({ label, color, onClick, outline }) => (
