@@ -17,8 +17,9 @@ export default function AdminDashboard() {
 
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
-const [searchInput, setSearchInput] = useState(""); // input box value
-const [search, setSearch] = useState("");           // actual filter applied
+const [search, setSearch] = useState(""); // the search input value
+  const [searchKeyword, setSearchKeyword] = useState(""); // applied search
+  const [sortOption, setSortOption] = useState("newest"); // default: newest first         // actual filter applied
   const [statusFilter, setStatusFilter] = useState("all"); // all, approved, pending, claimed
 
   const [loading, setLoading] = useState(true);
@@ -136,39 +137,34 @@ const submitClaim = async () => {
    FILTER LOGIC
 ===================================================== */
 const filteredItems = useMemo(() => {
-  return items.filter(item => {
-    // Status filter
-    const matchStatus = statusFilter === "all" || item.status === statusFilter;
+  return items
+    .filter(item => {
+      const matchStatus = statusFilter === "all" || item.status === statusFilter;
 
-    // Tab filter
-    let matchTab = false;
-    if (activeTab === "all") matchTab = true;
-    else if (activeTab === "found") matchTab = item.item_type === "found" && item.status !== "claimed";
-    else if (activeTab === "lost") matchTab = item.item_type === "lost" && item.status !== "claimed";
-    else if (activeTab === "claimed") matchTab = item.status === "claimed";
+      let matchTab = false;
+      if (activeTab === "all") matchTab = true;
+      else if (activeTab === "found") matchTab = item.item_type === "found" && item.status !== "claimed";
+      else if (activeTab === "lost") matchTab = item.item_type === "lost" && item.status !== "claimed";
+      else if (activeTab === "claimed") matchTab = item.status === "claimed";
 
-    // Live search across multiple fields
-    const searchTerm = searchInput.toLowerCase();
-    const fieldsToSearch = [
-      item.item_name,
-      item.description,
-      item.notes,
-      item.reporter_name,
-      item.location_found,
-      item.location_lost,
-      item.location,
-      item.claim_to,
-      item.claimed_by
-    ];
+      const query = search.toLowerCase();
+      const matchSearch = item.item_name?.toLowerCase().includes(query) ||
+                          item.description?.toLowerCase().includes(query) ||
+                          item.notes?.toLowerCase().includes(query) ||
+                          (item.reporter_name?.toLowerCase().includes(query) || false);
 
-    const matchSearch = fieldsToSearch.some(
-      field => field && field.toLowerCase().includes(searchTerm)
-    );
-
-    return matchStatus && matchTab && matchSearch;
-  });
-}, [items, activeTab, searchInput, statusFilter]);
-
+      return matchStatus && matchTab && matchSearch;
+    })
+    .sort((a, b) => {
+      if (sortOption === "newest") return new Date(b.created_at) - new Date(a.created_at);
+      if (sortOption === "oldest") return new Date(a.created_at) - new Date(b.created_at);
+      if (sortOption === "name-asc") return a.item_name.localeCompare(b.item_name);
+      if (sortOption === "name-desc") return b.item_name.localeCompare(a.item_name);
+      if (sortOption === "reporter-asc") return (a.reporter_name || "").localeCompare(b.reporter_name || "");
+      if (sortOption === "reporter-desc") return (b.reporter_name || "").localeCompare(a.reporter_name || "");
+      return 0;
+    });
+}, [items, activeTab, search, statusFilter, sortOption]);
 /* =====================================================
    TAB COUNTS
 ===================================================== */
@@ -227,7 +223,21 @@ const tabCounts = useMemo(() => {
   <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
     <Archive size={22} /> Reports Management
   </h2>
-<div className="flex items-center gap-4 mb-4">
+
+  <div className="flex items-center gap-4 mb-4">
+  <select
+    value={sortOption}
+    onChange={(e) => setSortOption(e.target.value)}
+    className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-400/30"
+  >
+    <option value="newest">Newest to Oldest</option>
+    <option value="oldest">Oldest to Newest</option>
+    <option value="name-asc">Item Name A → Z</option>
+    <option value="name-desc">Item Name Z → A</option>
+    <option value="reporter-asc">Reporter A → Z</option>
+    <option value="reporter-desc">Reporter Z → A</option>
+  </select>
+
   <select
     value={statusFilter}
     onChange={(e) => setStatusFilter(e.target.value)}
@@ -239,8 +249,14 @@ const tabCounts = useMemo(() => {
     <option value="claimed">Claimed</option>
   </select>
 
-  <SearchBar searchInput={searchInput} setSearchInput={setSearchInput} />
-  </div>
+  <input
+    type="text"
+    placeholder="Search reports..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)} // live search
+    className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm w-full focus:outline-none"
+  />
+</div>
 </div>
 
         {/* TABS */}
@@ -249,40 +265,40 @@ const tabCounts = useMemo(() => {
       </div>
 
       {/* CLAIM MODAL */}
-<ClaimModal
-  show={showClaimModal}
-  onClose={() => {
-    setShowClaimModal(false);
-    setClaimItem(null);
-  }}
-  itemName={claimItem?.item_name}
-  onSubmit={async ({ claimed_by, claim_datetime }) => {
-    if (!claimed_by || !claim_datetime) {
-      alert("Please complete all fields.");
-      return;
-    }
+      <ClaimModal
+        show={showClaimModal}
+        onClose={() => {
+          setShowClaimModal(false);
+          setClaimItem(null);
+        }}
+        itemName={claimItem?.item_name}
+        onSubmit={async ({ claimed_by, claim_datetime }) => {
+          if (!claimed_by || !claim_datetime) {
+            alert("Please complete all fields.");
+            return;
+          }
 
-    // Split date/time
-    const [date, time] = claim_datetime.split(" ");
+          // Split date/time
+          const [date, time] = claim_datetime.split(" ");
 
-    try {
-      await api.post(`/admin/items/${claimItem.id}/claimed`, {
-        claimed_by,
-        claim_datetime: claim_datetime,
-      });
+          try {
+            await api.post(`/admin/items/${claimItem.id}/claimed`, {
+              claimed_by,
+              claim_datetime: claim_datetime,
+            });
 
-      alert("Item marked as claimed!");
-      setShowClaimModal(false);
-      setClaimItem(null);
+            alert("Item marked as claimed!");
+            setShowClaimModal(false);
+            setClaimItem(null);
 
-      // Refresh dashboard
-      fetchDashboard();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to claim item.");
-    }
-  }}
-/>
+            // Refresh dashboard
+            fetchDashboard();
+          } catch (err) {
+            console.error(err);
+            alert("Failed to claim item.");
+          }
+        }}
+      />
     </div>
   );
 }
@@ -317,18 +333,7 @@ const StatCard = ({ title, value, icon, color }) => (
     <h3 className="text-4xl font-bold mt-3">{value}</h3>
   </div>
 );
-
-const SearchBar = ({ searchInput, setSearchInput }) => (
-  <div className="flex gap-2 w-full md:w-96">
-    <input
-      type="text"
-      placeholder="Search reports..."
-      value={searchInput}
-      onChange={e => setSearchInput(e.target.value)}
-      className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm w-full focus:outline-none"
-    />
-  </div>
-);
+s
 
 const Tabs = ({ activeTab, setActiveTab, tabCounts }) => (
   <div className="flex gap-12 border-b text-base font-medium">
