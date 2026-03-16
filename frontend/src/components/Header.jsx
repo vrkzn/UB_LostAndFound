@@ -1,58 +1,63 @@
-export default function Header({ applicantType }) {
-
+const Header = ({ applicantType, userName }) => {
   const isAdmin = applicantType === "admin";
 
   const headerColor = isAdmin
-    ? "bg-gradient-to-r from-gray-400 via-gray-400 to-gray-300 text-gray-900"
-    : "bg-gradient-to-r from-[#5B0000] via-[#7A1F1F] to-[#8A2A2A] text-white";
+    ? "bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 text-gray-100"
+    : "bg-gradient-to-r from-[#7A1F1F] via-[#8A2A2A] to-[#5B0000] text-white";
+
+  const handleLogout = () => {
+    if (window.confirm("Are you sure you want to log out?")) {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "/";
+    }
+  };
+
+  const displayName = userName?.trim() || "Unknown";
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <header
-      className={`
-        ${headerColor}
-        sticky top-0 z-50
-        shadow-md
-        transition-all duration-300
-        border-b-2
-        ${isAdmin ? "border-gray-600" : "border-gray-300"}
-      `}
+      className={`${headerColor} sticky top-0 z-50 shadow-md border-b border-gray-300`}
     >
+      <div className="flex items-center justify-between px-8 py-4">
 
-      <div className="flex items-center px-8 py-4 gap-6">
-
-        {/* Logo */}
-        <img
-          src="/ub_logo.png"
-          alt="UB Logo"
-          className="h-12 w-auto drop-shadow-sm hover:scale-105 transition"
-        />
-
-        {/* Title */}
-        <div className="flex flex-col leading-tight">
-          <h1 className="text-xl font-bold tracking-wide">
-            UB SIHTM Lost & Found System
-          </h1>
-
-          <span className="text-sm opacity-70">
-            University of Baguio School of International Hospitality and Tourism Management
-          </span>
+        {/* LEFT: Logo + Title */}
+        <div className="flex items-center gap-4">
+          <img
+            src="/ub_logo.png"
+            alt="UB Logo"
+            className="h-12 w-auto transition-transform duration-300 hover:scale-110"
+          />
+          <div className="hidden sm:flex flex-col leading-tight">
+            <h1 className="text-lg font-bold tracking-wide drop-shadow-sm">
+              UB SIHTM Lost & Found
+            </h1>
+            <p className="text-xs opacity-70">
+              University of Baguio Hospitality & Tourism Management
+            </p>
+          </div>
         </div>
 
-        {/* Admin Badge */}
-        {isAdmin && (
-          <div className="ml-auto">
-            <span className="
-              text-xs font-semibold uppercase tracking-wider
-              px-4 py-1 rounded-full
-              bg-gray-800 text-white
-              shadow-sm border border-gray-900
-            ">
-              Administrator Mode
-            </span>
+        {/* RIGHT: Profile & Logout */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl shadow-md hover:scale-105 transition-transform duration-200 hover:bg-white/30"
+        >
+          {/* Avatar Circle */}
+          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-800 text-white font-semibold text-sm">
+            {initial}
           </div>
-        )}
 
+          {/* Name & Logout */}
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-white">{displayName}</span>
+            <span className="text-xs text-gray-200 opacity-80">Log out</span>
+          </div>
+        </button>
       </div>
     </header>
   );
-}
+};
+
+export default Header;

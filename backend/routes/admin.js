@@ -1,12 +1,20 @@
 import express from "express";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import db from "../db.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
+// Fix __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 router.get("/dashboard", authenticateToken, async (req, res) => {
 
   try {
+    const userId = req.user.id; // coming from token
+    const [[user]] = await db.query("SELECT name FROM USERS WHERE id=?", [userId]);
 
     /*
     =====================================================
@@ -54,15 +62,13 @@ const [foundItems] = await db.query(`
     f.time_found,
     f.claim_to,
     f.status,
-    f.claimed_by,       -- add this
-    f.claim_datetime,   -- add this
+    f.claimed_by,
+    f.claim_datetime,
     f.created_at,
     'found' AS item_type,
-
-    CASE
-      WHEN f.isAnonymous = 1 THEN 'Anonymous'
-      ELSE u.name
-    END AS reporter_name,
+    
+    u.name AS reporter_name,      -- always give the user's name
+    f.isAnonymous,               -- add this to indicate anonymous
 
     (
       SELECT image_path
@@ -94,15 +100,13 @@ const [lostItems] = await db.query(`
     l.time_lost AS time_found,
     l.claim_to,
     l.status,
-    l.claimed_by,       -- add this
-    l.claim_datetime,   -- add this
+    l.claimed_by,
+    l.claim_datetime,
     l.created_at,
     'lost' AS item_type,
-
-    CASE
-      WHEN l.isAnonymous = 1 THEN 'Anonymous'
-      ELSE u.name
-    END AS reporter_name,
+    
+    u.name AS reporter_name,      -- always give the user's name
+    l.isAnonymous,               -- add this to indicate anonymous
 
     (
       SELECT image_path
@@ -116,6 +120,12 @@ const [lostItems] = await db.query(`
   ORDER BY l.created_at DESC
 `);
 
+// Inside /admin/dashboard route
+const [[currentUser]] = await db.query(
+  "SELECT name FROM USERS WHERE id=?",
+  [req.user.id] // from authenticateToken
+);
+
     res.json({
       stats: {
         totalLost: lostStats.total,
@@ -124,7 +134,8 @@ const [lostItems] = await db.query(`
         totalClaimed: claimedStats.total
       },
 
-      items: [...foundItems, ...lostItems]
+  items: [...foundItems, ...lostItems],
+  userName: currentUser?.name || "Unknown"  // send current user's name
     });
 
   } catch (err) {
@@ -142,109 +153,76 @@ const [lostItems] = await db.query(`
 // --------------------------------------------------
 
 router.post("/items/:id/:action", authenticateToken, async (req, res) => {
-
   try {
-
     const { id, action } = req.params;
 
-    /*
-    =====================================
-    Determine Item Table
-    =====================================
-    */
-
+    // Determine item table and image folder
     let table = "FOUND_ITEMS";
+    let imageTable = "FOUND_ITEM_IMAGES";
+    let imageColumn = "found_item_id";
+    let imageFolder = "found_items"; // folder in uploads
 
-    const [[found]] = await db.query(
-      "SELECT id FROM FOUND_ITEMS WHERE id=?",
-      [id]
-    );
+    const [[found]] = await db.query("SELECT id FROM FOUND_ITEMS WHERE id=?", [id]);
 
     if (!found) {
-      const [[lost]] = await db.query(
-        "SELECT id FROM LOST_ITEMS WHERE id=?",
-        [id]
-      );
-
-      if (lost) table = "LOST_ITEMS";
-      else return res.status(404).json({ message: "Item not found" });
+      const [[lost]] = await db.query("SELECT id FROM LOST_ITEMS WHERE id=?", [id]);
+      if (lost) {
+        table = "LOST_ITEMS";
+        imageTable = "LOST_ITEM_IMAGES";
+        imageColumn = "lost_item_id";
+        imageFolder = "lost_items"; // folder in uploads
+      } else {
+        return res.status(404).json({ message: "Item not found" });
+      }
     }
 
-    /*
-    =====================================
-    GET STATUS
-    =====================================
-    */
-
-    const [[item]] = await db.query(
-      `SELECT status FROM ${table} WHERE id=?`,
-      [id]
-    );
-
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: "Item not found"
-      });
-    }
-
-    /*
-    =====================================
-    ACTION HANDLER
-    =====================================
-    */
+    // Get item status
+    const [[item]] = await db.query(`SELECT status FROM ${table} WHERE id=?`, [id]);
+    if (!item) return res.status(404).json({ success: false, message: "Item not found" });
 
     if (action === "verify") {
+      const newStatus = item.status === "approved" ? "pending" : "approved";
+      await db.query(`UPDATE ${table} SET status=? WHERE id=?`, [newStatus, id]);
+    } else if (action === "claimed") {
+      if (item.status === "claimed") {
+        await db.query(
+          `UPDATE ${table} SET status='approved', claimed_by=NULL, claim_datetime=NULL WHERE id=?`,
+          [id]
+        );
+      } else {
+        const { claimed_by, claim_datetime } = req.body;
+        await db.query(
+          `UPDATE ${table} SET status='claimed', claimed_by=?, claim_datetime=? WHERE id=?`,
+          [claimed_by, claim_datetime, id]
+        );
+      }
+    } else if (action === "delete") {
+      // 1️⃣ Get all associated images
+      const [images] = await db.query(`SELECT image_path FROM ${imageTable} WHERE ${imageColumn}=?`, [id]);
 
-      const newStatus =
-        item.status === "approved" ? "pending" : "approved";
+      // 2️⃣ Delete image files safely
+      for (const img of images) {
+        if (img.image_path) {
+          const imgPath = path.join(__dirname, "uploads", imageFolder, path.basename(img.image_path));
+          try {
+            if (fs.existsSync(imgPath)) {
+              fs.unlinkSync(imgPath);
+              console.log(`Deleted image: ${imgPath}`);
+            }
+          } catch (err) {
+            console.error("Failed to delete image:", imgPath, err);
+          }
+        }
+      }
 
-      await db.query(
-        `UPDATE ${table} SET status=? WHERE id=?`,
-        [newStatus, id]
-      );
-    }
+      // 3️⃣ Delete image records from DB
+      await db.query(`DELETE FROM ${imageTable} WHERE ${imageColumn}=?`, [id]);
 
-else if (action === "claimed") {
-
-  if (item.status === "claimed") {
-
-    await db.query(
-      `UPDATE ${table} 
-       SET status='approved',
-           claimed_by=NULL,
-           claim_datetime=NULL
-       WHERE id=?`,
-      [id]
-    );
-
-  } else {
-
-    const { claimed_by, claim_datetime } = req.body;
-
-    await db.query(
-      `UPDATE ${table}
-       SET status='claimed',
-           claimed_by=?,
-           claim_datetime=?
-       WHERE id=?`,
-      [claimed_by, claim_datetime, id]
-    );
-
-  }
-
-}
-
-    else if (action === "delete") {
-
-      await db.query(
-        `DELETE FROM ${table} WHERE id=?`,
-        [id]
-      );
+      // 4️⃣ Delete the main item
+      await db.query(`DELETE FROM ${table} WHERE id=?`, [id]);
     }
 
     res.json({ success: true });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false });
@@ -304,4 +282,24 @@ router.post("/items/:id/claimed", authenticateToken, async (req, res) => {
   }
 
 });
+
+router.get("/me", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id; // assuming authenticateToken sets req.user
+    const [[user]] = await db.query("SELECT id, name, user_name, user_type FROM USERS WHERE id=?", [userId]);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      id: user.id,
+      name: user.name || "Unknown",
+      user_name: user.user_name,
+      user_type: user.user_type
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch user" });
+  }
+});
+
 export default router;

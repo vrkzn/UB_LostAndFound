@@ -31,9 +31,6 @@ function App() {
             <Route path="/lostitems" element={<ReportLostItems />} />
             <Route path="/admindashboard" element={<AdminDashboard />} />
             <Route path="/reportdetails" element={<ReportDetails />} />
-          </Route>
-            <Route element={<Layout />}>
-            <Route path="/admindashboard" element={<AdminDashboard />} />
             <Route path="/claimmodal" element={<ClaimModal />} />
           </Route>
 
