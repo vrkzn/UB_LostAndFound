@@ -364,13 +364,14 @@ router.post("/lost", authenticateToken, upload.array("images", 3), async (req, r
         message: "Please fill in all required fields"
       });
     }
+        const created_at = getPhilippineTime();
 
     // Insert lost item
     const insertQuery = `
       INSERT INTO LOST_ITEMS
       (user_id, item_name, category, date_lost, time_lost,
-       location_lost, claim_to, description, notes, isAnonymous)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       location_lost, claim_to, description, notes, isAnonymous, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.execute(insertQuery, [
@@ -383,7 +384,8 @@ router.post("/lost", authenticateToken, upload.array("images", 3), async (req, r
       claim_to,
       description,
       notes || null,
-      isAnonymous === "true" || isAnonymous === true ? 1 : 0
+      isAnonymous === "true" || isAnonymous === true ? 1 : 0,
+    created_at
     ]);
 
     const lostItemId = result.insertId;

@@ -58,8 +58,8 @@ const [foundItems] = await db.query(`
     f.description,
     f.notes,
     f.location_found AS location,
-    f.date_found,
-    f.time_found,
+    f.date_found AS event_date,
+    f.time_found AS event_time,
     f.claim_to,
     f.status,
     f.claimed_by,
@@ -96,8 +96,8 @@ const [lostItems] = await db.query(`
     l.description,
     l.notes,
     l.location_lost AS location,
-    l.date_lost AS date_found,
-    l.time_lost AS time_found,
+    l.date_lost AS event_date,
+    l.time_lost AS event_time,
     l.claim_to,
     l.status,
     l.claimed_by,
@@ -105,8 +105,8 @@ const [lostItems] = await db.query(`
     l.created_at,
     'lost' AS item_type,
     
-    u.name AS reporter_name,      -- always give the user's name
-    l.isAnonymous,               -- add this to indicate anonymous
+    u.name AS reporter_name,     
+    l.isAnonymous,              
 
     (
       SELECT image_path
@@ -229,7 +229,7 @@ router.post("/items/:id/:action", authenticateToken, async (req, res) => {
   }
 });
 
-// backend/routes/admin.js
+// CLAIM/UNCLAIM endpoint (handles both lost and found items)
 router.post("/items/:id/claimed", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;

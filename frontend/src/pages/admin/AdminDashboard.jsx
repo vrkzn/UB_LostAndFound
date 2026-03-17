@@ -21,7 +21,6 @@ const [search, setSearch] = useState(""); // the search input value
   const [searchKeyword, setSearchKeyword] = useState(""); // applied search
   const [sortOption, setSortOption] = useState("newest"); // default: newest first         // actual filter applied
   const [statusFilter, setStatusFilter] = useState("all"); // all, approved, pending, claimed
-  const [userName, setUserName] = useState("");
 
   const [loading, setLoading] = useState(true);
 
@@ -31,22 +30,36 @@ const [search, setSearch] = useState(""); // the search input value
   const [claimedBy, setClaimedBy] = useState("");
   const [claimedDate, setClaimedDate] = useState("");
   const [claimedTime, setClaimedTime] = useState("");
+  const formatDateTime = (datetime) => {
+    if (!datetime) return "N/A";
+    return new Date(datetime.replace(" ", "T")).toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
   /* =====================================================
      FETCH DASHBOARD DATA
   ===================================================== */
-
-// Fetch dashboard
-const fetchDashboard = async () => {
-  try {
-    const res = await api.get("/admin/dashboard");
-    setUserName(res.data.userName); // store logged-in user’s name
-    setStats(res.data.stats || { totalLost: 0, totalFound: 0, totalUnclaimed: 0 });
-    setItems(res.data.items || []);
-  } catch (err) {
-    console.error(err);
-  }
-};
+  const fetchDashboard = async () => {
+    try {
+      const res = await api.get("/admin/dashboard");
+      setStats(res.data.stats || { totalLost: 0, totalFound: 0, totalUnclaimed: 0 });
+      let fetchedItems = res.data.items || [];
+      fetchedItems.sort(
+        (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+      );
+      setItems(fetchedItems);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* =====================================================
      HANDLE ACTIONS (VERIFY, CLAIMED, DELETE)
@@ -184,6 +197,9 @@ const tabCounts = useMemo(() => {
   return (
     <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 space-y-8">
 
+      {/* HEADER */}
+      <Header />
+
       {/* STATS GRID */}
 <div className="grid md:grid-cols-4 gap-6">
   <StatCard
@@ -256,7 +272,7 @@ const tabCounts = useMemo(() => {
 
         {/* TABS */}
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabCounts={tabCounts} />
-        <TableView items={filteredItems} handleAction={handleAction} />
+        <TableView items={filteredItems} handleAction={handleAction} formatDateTime={formatDateTime} />
       </div>
 
       {/* CLAIM MODAL */}
@@ -313,6 +329,14 @@ const LoadingSkeleton = () => (
   </div>
 );
 
+const Header = () => (
+  <div className="space-y-2">
+    <h1 className="text-4xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
+    <p className="text-gray-500 text-sm max-w-xl leading-relaxed">
+      Lost and Found Management System Administration Panel
+    </p>
+  </div>
+);
 
 const StatCard = ({ title, value, icon, color }) => (
   <div className={`bg-gradient-to-br ${color} rounded-2xl p-7 shadow-md hover:-translate-y-1 transition duration-300`}>
@@ -320,7 +344,6 @@ const StatCard = ({ title, value, icon, color }) => (
     <h3 className="text-4xl font-bold mt-3">{value}</h3>
   </div>
 );
-
 
 const Tabs = ({ activeTab, setActiveTab, tabCounts }) => (
   <div className="flex gap-12 border-b text-base font-medium">
@@ -352,12 +375,13 @@ const TabButton = ({ label, active, onClick, activeColor }) => (
   </button>
 );
 
-const TableView = ({ items, handleAction }) => {
+const TableView = ({ items, handleAction, formatDateTime }) => {
   if (!items.length) return (
     <div className="p-20 text-center text-gray-400">
       <Archive size={60} className="mx-auto opacity-30"/>
       <p className="mt-4 text-lg font-medium">No reports found</p>
     </div>
+    
   );
 
  
@@ -368,17 +392,32 @@ const TableView = ({ items, handleAction }) => {
         const formattedDate = dateObj ? dateObj.toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric"}) : "N/A";
         const formattedTime = dateObj ? dateObj.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "";
 
+        const datePart = item.event_date
+        ? new Date(item.event_date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "2-digit"
+          })
+        : "N/A";
+
+      const timePart = item.event_time
+        ? new Date(`1970-01-01T${item.event_time}`).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true
+          })
+        : "";
         return (
           <div key={`${item.item_type}-${item.id}`} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition duration-300 overflow-hidden">
             <div className="flex justify-between items-start p-6 border-b border-gray-300">
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-gray-900">{item.item_name}</h3>
-<p className="text-sm text-gray-600 font-medium">
-  Reported by: {item.reporter_name || "Unknown"}{item.isAnonymous ? " | Anonymous" : ""}
-</p>
+                <p className="text-sm text-gray-600 font-medium">Reported by: {item.reporter_name || "Anonymous"}</p>
                 <div className="flex items-center gap-3 text-sm">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${item.item_type==="found"?"bg-green-100 text-green-700":"bg-red-100 text-red-700"}`}>{item.item_type}</span>
-                  <span className="text-gray-400">{item.item_type==="found"?"Found":"Lost"} {formattedDate} | {formattedTime}</span>
+                    <span className="text-gray-400">
+                      {item.item_type === "found" ? "Found" : "Lost"} {datePart} | {timePart}
+                    </span>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
