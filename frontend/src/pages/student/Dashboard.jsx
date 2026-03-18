@@ -19,7 +19,7 @@ export default function Dashboard() {
   // Fetch items based on type and filters
   const fetchItems = async (type) => {
     setLoading(true);
-    setItems([]); // clear previous items immediately
+    setItems([]);
     try {
       const params = {};
       if (searchKeyword) params.search = searchKeyword;
@@ -35,18 +35,15 @@ export default function Dashboard() {
     }
   };
 
-  // Update tab and fetch items
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     fetchItems(tab);
   };
 
-  // Re-fetch items whenever filters change
   useEffect(() => {
     fetchItems(activeTab);
   }, [searchKeyword, categoryFilter, dateFilter]);
 
-  // Initial fetch
   useEffect(() => {
     fetchItems(activeTab);
   }, []);
@@ -139,29 +136,29 @@ export default function Dashboard() {
             {!loading && items.length === 0 && (
               <p className="text-center text-gray-400 col-span-full">No items to display</p>
             )}
-{items.map(item => (
-  <div
-    key={item.id}
-    onClick={() => setSelectedItem(item)}
-    className="bg-white p-5 rounded-2xl shadow-md flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer"
-  >
-    <div className="w-full h-40 bg-gray-200 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
-      {item.images?.length > 0 ? (
-        <img
-          src={`http://localhost:7002${item.images[0]}`}
-          alt={capitalizeFirst(item.item_name)}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <p className="text-gray-400 text-sm">No image</p>
-      )}
-    </div>
+            {items.map(item => (
+              <div
+                key={item.id}
+                onClick={() => setSelectedItem(item)}
+                className="bg-white p-5 rounded-2xl shadow-md flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer"
+              >
+                <div className="w-full h-40 bg-gray-200 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+                  {item.images?.length > 0 ? (
+                    <img
+                      src={`http://localhost:7002${item.images[0]}`}
+                      alt={capitalizeFirst(item.item_name)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <p className="text-gray-400 text-sm">No image</p>
+                  )}
+                </div>
 
-    <p className="font-medium text-gray-700 text-center">
-      {capitalizeFirst(item.item_name)}
-    </p>
-  </div>
-))}
+                <p className="font-medium text-gray-700 text-center">
+                  {capitalizeFirst(item.item_name)}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 

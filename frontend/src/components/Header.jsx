@@ -31,7 +31,7 @@ const Header = ({ applicantType, userName }) => {
           />
           <div className="hidden sm:flex flex-col leading-tight">
             <h1 className="text-lg font-bold tracking-wide drop-shadow-sm">
-              UB SIHTM Lost & Found
+              University of Baguio Lost & Found
             </h1>
             <p className="text-xs opacity-70">
               University of Baguio Hospitality & Tourism Management

@@ -103,16 +103,16 @@ router.post("/login", async (req, res) => {
         }
 
         /* Generate JWT Token */
-const token = jwt.sign(
-{
-    id: user.id,           // ⭐ CRITICAL
-    email: user.user_email,
-    user_type: user.user_type
-},
-process.env.JWT_SECRET,
-{
-    expiresIn: "1h"
-});
+        const token = jwt.sign(
+        {
+            id: user.id,           // ⭐ CRITICAL
+            email: user.user_email,
+            user_type: user.user_type
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: "1h"
+        });
 
         return res.status(200).json({
             success: true,

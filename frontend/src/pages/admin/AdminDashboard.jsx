@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import api from "../../api/axios";
-import { FileWarning, CheckCircle, Archive, Search } from "lucide-react";
+import { FileWarning, CheckCircle, Archive } from "lucide-react";
 import ClaimModal from "./ClaimModal";
 
 /* =====================================================
@@ -14,12 +14,11 @@ export default function AdminDashboard() {
     totalUnclaimed: 0
   });
   
-
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
-const [search, setSearch] = useState(""); // the search input value
+  const [search, setSearch] = useState(""); // the search input value
   const [searchKeyword, setSearchKeyword] = useState(""); // applied search
-  const [sortOption, setSortOption] = useState("newest"); // default: newest first         // actual filter applied
+  const [sortOption, setSortOption] = useState("newest"); // default: newest first      
   const [statusFilter, setStatusFilter] = useState("all"); // all, approved, pending, claimed
 
   const [loading, setLoading] = useState(true);
@@ -118,225 +117,217 @@ if (action === "claimed") {
   /* =====================================================
      SUBMIT CLAIM
   ===================================================== */
-const submitClaim = async () => {
-  if (!claimedBy || !claimedDate || !claimedTime) {
-    alert("Please complete all fields.");
-    return;
-  }
+  const submitClaim = async () => {
+    if (!claimedBy || !claimedDate || !claimedTime) {
+      alert("Please complete all fields.");
+      return;
+    }
 
-  try {
-    await api.post(`/admin/items/${claimItem.id}/claimed`, {
-      claimed_by: claimedBy,
-      claim_datetime: `${claimedDate} ${claimedTime}`,
-    });
-    alert("Item claimed successfully!");
-    setShowClaimModal(false);
-    setClaimedBy(""); setClaimedDate(""); setClaimedTime(""); setClaimItem(null);
-    fetchDashboard();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to claim item.");
-  }
-};
+    try {
+      await api.post(`/admin/items/${claimItem.id}/claimed`, {
+        claimed_by: claimedBy,
+        claim_datetime: `${claimedDate} ${claimedTime}`,
+      });
+      alert("Item marked as claimed!");
+      setShowClaimModal(false);
+      setClaimedBy(""); setClaimedDate(""); setClaimedTime(""); setClaimItem(null);
+      fetchDashboard();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark item as claimed.");
+    }
+  };
 
   useEffect(() => { fetchDashboard(); }, []);
 
   /* =====================================================
      FILTER LOGIC
   ===================================================== */
-/* =====================================================
-   FILTER LOGIC
-===================================================== */
-const filteredItems = useMemo(() => {
-  return items
-    .filter(item => {
-      const matchStatus = statusFilter === "all" || item.status === statusFilter;
+  const filteredItems = useMemo(() => {
+    return items
+      .filter(item => {
+        const matchStatus = statusFilter === "all" || item.status === statusFilter;
 
-      let matchTab = false;
-      if (activeTab === "all") matchTab = true;
-      else if (activeTab === "found") matchTab = item.item_type === "found" && item.status !== "claimed";
-      else if (activeTab === "lost") matchTab = item.item_type === "lost" && item.status !== "claimed";
-      else if (activeTab === "claimed") matchTab = item.status === "claimed";
+        let matchTab = false;
+        if (activeTab === "all") matchTab = true;
+        else if (activeTab === "found") matchTab = item.item_type === "found" && item.status !== "claimed";
+        else if (activeTab === "lost") matchTab = item.item_type === "lost" && item.status !== "claimed";
+        else if (activeTab === "claimed") matchTab = item.status === "claimed";
 
-      const query = search.toLowerCase();
-      const matchSearch = item.item_name?.toLowerCase().includes(query) ||
-                          item.description?.toLowerCase().includes(query) ||
-                          item.notes?.toLowerCase().includes(query) ||
-                          (item.reporter_name?.toLowerCase().includes(query) || false);
+        const query = search.toLowerCase();
+        const matchSearch = item.item_name?.toLowerCase().includes(query) ||
+                            item.description?.toLowerCase().includes(query) ||
+                            item.notes?.toLowerCase().includes(query) ||
+                            (item.reporter_name?.toLowerCase().includes(query) || false);
 
-      return matchStatus && matchTab && matchSearch;
-    })
-    .sort((a, b) => {
-      if (sortOption === "newest") return new Date(b.created_at) - new Date(a.created_at);
-      if (sortOption === "oldest") return new Date(a.created_at) - new Date(b.created_at);
-      if (sortOption === "name-asc") return a.item_name.localeCompare(b.item_name);
-      if (sortOption === "name-desc") return b.item_name.localeCompare(a.item_name);
-      if (sortOption === "reporter-asc") return (a.reporter_name || "").localeCompare(b.reporter_name || "");
-      if (sortOption === "reporter-desc") return (b.reporter_name || "").localeCompare(a.reporter_name || "");
-      return 0;
-    });
-}, [items, activeTab, search, statusFilter, sortOption]);
+        return matchStatus && matchTab && matchSearch;
+      })
+      .sort((a, b) => {
+        if (sortOption === "newest") return new Date(b.created_at) - new Date(a.created_at);
+        if (sortOption === "oldest") return new Date(a.created_at) - new Date(b.created_at);
+        if (sortOption === "name-asc") return a.item_name.localeCompare(b.item_name);
+        if (sortOption === "name-desc") return b.item_name.localeCompare(a.item_name);
+        if (sortOption === "reporter-asc") return (a.reporter_name || "").localeCompare(b.reporter_name || "");
+        if (sortOption === "reporter-desc") return (b.reporter_name || "").localeCompare(a.reporter_name || "");
+        return 0;
+      });
+  }, [items, activeTab, search, statusFilter, sortOption]);
+
 /* =====================================================
    TAB COUNTS
 ===================================================== */
-const tabCounts = useMemo(() => {
-  const counts = { all: 0, found: 0, lost: 0, claimed: 0 };
+  const tabCounts = useMemo(() => {
+    const counts = { all: 0, found: 0, lost: 0, claimed: 0 };
 
-  items.forEach(item => {
-    // Skip items that don't match the status filter
-    if (statusFilter !== "all" && item.status !== statusFilter) return;
+    items
+      .filter(item => {
+        // STATUS FILTER
+        if (statusFilter !== "all" && item.status !== statusFilter) return false;
 
-    counts.all += 1;
-    if (item.item_type === "found" && item.status !== "claimed") counts.found += 1;
-    if (item.item_type === "lost" && item.status !== "claimed") counts.lost += 1;
-    if (item.status === "claimed") counts.claimed += 1;
-  });
+        // SEARCH FILTER
+        const query = search.toLowerCase();
+        const matchSearch =
+          item.item_name?.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query) ||
+          item.notes?.toLowerCase().includes(query) ||
+          (item.reporter_name?.toLowerCase().includes(query) || false);
 
-  return counts;
-}, [items, statusFilter]);
-  return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 space-y-8">
+        return matchSearch;
+      })
+      .forEach(item => {
+        counts.all += 1;
 
-      {/* HEADER */}
-      <Header />
+        if (item.item_type === "found" && item.status !== "claimed") {
+          counts.found += 1;
+        }
 
-      {/* STATS GRID */}
-<div className="grid md:grid-cols-4 gap-6">
-  <StatCard
-    title="Total Lost Reports"
-    value={stats.totalLost}
-    icon={<FileWarning />}
-    color="from-red-50 to-red-100 text-red-600"
-  />
-  <StatCard
-    title="Total Found Reports"
-    value={stats.totalFound}
-    icon={<CheckCircle />}
-    color="from-green-50 to-green-100 text-green-600"
-  />
-  <StatCard
-    title="Unclaimed Items"
-    value={stats.totalUnclaimed}
-    icon={<Archive />}
-    color="from-blue-50 to-blue-100 text-blue-600"
-  />
-  <StatCard
-    title="Claimed Items"
-    value={stats.totalClaimed}
-    icon={<CheckCircle />}
-    color="from-indigo-50 to-indigo-100 text-indigo-600"
-  />
-</div>
+        if (item.item_type === "lost" && item.status !== "claimed") {
+          counts.lost += 1;
+        }
 
-      {/* MANAGEMENT PANEL */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-8 space-y-6">
-<div className="flex flex-wrap justify-between gap-4 items-center">
-  <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-    <Archive size={22} /> Reports Management
-  </h2>
+        if (item.status === "claimed") {
+          counts.claimed += 1;
+        }
+      });
 
-  <div className="flex items-center gap-4 mb-4">
-  <select
-    value={sortOption}
-    onChange={(e) => setSortOption(e.target.value)}
-    className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-400/30"
-  >
-    <option value="newest">Newest to Oldest</option>
-    <option value="oldest">Oldest to Newest</option>
-    <option value="name-asc">Item Name A → Z</option>
-    <option value="name-desc">Item Name Z → A</option>
-    <option value="reporter-asc">Reporter A → Z</option>
-    <option value="reporter-desc">Reporter Z → A</option>
-  </select>
+    return counts;
+  }, [items, statusFilter, search]);
+    return (
+      <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 space-y-8">
 
-  <select
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(e.target.value)}
-    className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-400/30"
-  >
-    <option value="all">All Status</option>
-    <option value="approved">Approved</option>
-    <option value="pending">Pending</option>
-    <option value="claimed">Claimed</option>
-  </select>
+        {/* STATS GRID */}
+        <div className="grid md:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Lost Reports"
+            value={stats.totalLost}
+            icon={<FileWarning />}
+            color="from-red-50 to-red-100 text-red-600"
+          />
+          <StatCard
+            title="Total Found Reports"
+            value={stats.totalFound}
+            icon={<CheckCircle />}
+            color="from-green-50 to-green-100 text-green-600"
+          />
+          <StatCard
+            title="Unclaimed Items"
+            value={stats.totalUnclaimed}
+            icon={<Archive />}
+            color="from-blue-50 to-blue-100 text-blue-600"
+          />
+          <StatCard
+            title="Claimed Items"
+            value={stats.totalClaimed}
+            icon={<CheckCircle />}
+            color="from-indigo-50 to-indigo-100 text-indigo-600"
+          />
+        </div>
 
-  <input
-    type="text"
-    placeholder="Search reports..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)} // live search
-    className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm w-full focus:outline-none"
-  />
-</div>
-</div>
+        {/* MANAGEMENT PANEL */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-8 space-y-6">
+          <div className="flex flex-wrap justify-between gap-4 items-center">
+            <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+              <Archive size={22} /> Reports Management
+            </h2>
 
-        {/* TABS */}
-        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabCounts={tabCounts} />
-        <TableView items={filteredItems} handleAction={handleAction} formatDateTime={formatDateTime} />
-      </div>
+            <div className="flex items-center gap-4 mb-4">
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="newest">Newest to Oldest</option>
+              <option value="oldest">Oldest to Newest</option>
+              <option value="name-asc">Item Name A → Z</option>
+              <option value="name-desc">Item Name Z → A</option>
+              <option value="reporter-asc">Reporter A → Z</option>
+              <option value="reporter-desc">Reporter Z → A</option>
+            </select>
 
-      {/* CLAIM MODAL */}
-      <ClaimModal
-        show={showClaimModal}
-        onClose={() => {
-          setShowClaimModal(false);
-          setClaimItem(null);
-        }}
-        itemName={claimItem?.item_name}
-        onSubmit={async ({ claimed_by, claim_datetime }) => {
-          if (!claimed_by || !claim_datetime) {
-            alert("Please complete all fields.");
-            return;
-          }
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-400/30"
+            >
+              <option value="all">All Status</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="claimed">Claimed</option>
+            </select>
 
-          // Split date/time
-          const [date, time] = claim_datetime.split(" ");
+            <input
+              type="text"
+              placeholder="Search reports..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)} // live search
+              className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm w-full focus:outline-none"
+            />
+          </div>
+          </div>
 
-          try {
-            await api.post(`/admin/items/${claimItem.id}/claimed`, {
-              claimed_by,
-              claim_datetime: claim_datetime,
-            });
+          {/* TABS */}
+          <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabCounts={tabCounts} />
+          <TableView items={filteredItems} handleAction={handleAction} formatDateTime={formatDateTime} />
+        </div>
 
-            alert("Item marked as claimed!");
+        {/* CLAIM MODAL */}
+        <ClaimModal
+          show={showClaimModal}
+          onClose={() => {
             setShowClaimModal(false);
             setClaimItem(null);
+          }}
+          itemName={claimItem?.item_name}
+          onSubmit={async ({ claimed_by, claim_datetime }) => {
+            if (!claimed_by || !claim_datetime) {
+              alert("Please complete all fields.");
+              return;
+            }
 
-            // Refresh dashboard
-            fetchDashboard();
-          } catch (err) {
-            console.error(err);
-            alert("Failed to claim item.");
-          }
-        }}
-      />
-    </div>
-  );
-}
+            // Split date/time
+            const [date, time] = claim_datetime.split(" ");
 
-/* =====================================================
-   COMPONENTS
-===================================================== */
+            try {
+              await api.post(`/admin/items/${claimItem.id}/claimed`, {
+                claimed_by,
+                claim_datetime: claim_datetime,
+              });
 
-const LoadingSkeleton = () => (
-  <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100">
-    <div className="animate-pulse space-y-6">
-      <div className="h-10 w-64 bg-gray-200 rounded-xl"></div>
-      <div className="grid md:grid-cols-3 gap-6">
-        {[1,2,3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>)}
+              alert("Item marked as claimed!");
+              setShowClaimModal(false);
+              setClaimItem(null);
+
+              // Refresh dashboard
+              fetchDashboard();
+            } catch (err) {
+              console.error(err);
+              alert("Failed to claim item.");
+            }
+          }}
+        />
       </div>
-    </div>
-  </div>
-);
-
-const Header = () => (
-  <div className="space-y-2">
-    <h1 className="text-4xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
-    <p className="text-gray-500 text-sm max-w-xl leading-relaxed">
-      Lost and Found Management System Administration Panel
-    </p>
-  </div>
-);
+    );
+  }
 
 const StatCard = ({ title, value, icon, color }) => (
   <div className={`bg-gradient-to-br ${color} rounded-2xl p-7 shadow-md hover:-translate-y-1 transition duration-300`}>
@@ -412,7 +403,9 @@ const TableView = ({ items, handleAction, formatDateTime }) => {
             <div className="flex justify-between items-start p-6 border-b border-gray-300">
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-gray-900">{item.item_name}</h3>
-                <p className="text-sm text-gray-600 font-medium">Reported by: {item.reporter_name || "Anonymous"}</p>
+                <p className="text-sm text-gray-600 font-medium">
+                  Reported by: {item.reporter_name || "Anonymous"}{item.isAnonymous ? " | Anonymous" : ""}
+                </p>
                 <div className="flex items-center gap-3 text-sm">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${item.item_type==="found"?"bg-green-100 text-green-700":"bg-red-100 text-red-700"}`}>{item.item_type}</span>
                     <span className="text-gray-400">
@@ -427,7 +420,7 @@ const TableView = ({ items, handleAction, formatDateTime }) => {
                 {/* Claimed Details (if item is claimed) */}
                 {item.status === "claimed" && (
                   <div className="text-xs text-blue-600 mt-1 text-right">
-                    <p>Claimed By: {item.claimed_by || "Unknown"}</p>
+                    <p>Claimed by: {item.claimed_by || "Unknown"}</p>
                     <p>
                       Claimed Date:{" "}
                       {item.claim_datetime

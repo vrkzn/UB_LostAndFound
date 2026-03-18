@@ -23,7 +23,6 @@ const __dirname = path.dirname(__filename);
  Upload Directory Setup
 ====================================================
 */
-// Ensure folder exists
 const lostDir = path.join(__dirname, "../uploads/lost_items");
 
 if (!fs.existsSync(lostDir)) {
@@ -93,7 +92,6 @@ const upload = multer({
  Utility Function — Philippine Time Generator
 ====================================================
 */
-
 function getPhilippineTime() {
     return new Date(
         new Date().toLocaleString("en-US", {
@@ -107,7 +105,6 @@ function getPhilippineTime() {
  Found Item Report Route
 ====================================================
 */
-
 router.post("/found",
     authenticateToken,
     (req, res, next) => {
@@ -244,7 +241,7 @@ router.post("/found",
 router.get("/:type", authenticateToken, async (req, res) => {
   try {
     const { type } = req.params;
-    const { search, category, date } = req.query; // filters from frontend
+    const { search, category, date } = req.query;
 
     if (!["found", "lost"].includes(type)) {
       return res.status(400).json({ message: "Invalid type" });
@@ -272,7 +269,6 @@ router.get("/:type", authenticateToken, async (req, res) => {
 
     const { table, imageTable, foreignKey, dateColumn, timeColumn, locationColumn } = config[type];
 
-    // Build dynamic WHERE conditions
     const whereClauses = ["i.status = 'approved'"];
     const params = [];
 
@@ -354,7 +350,7 @@ router.post("/lost", authenticateToken, upload.array("images", 3), async (req, r
       isAnonymous
     } = req.body;
 
-    // ✅ Force user_id from auth middleware
+    // Force user_id from auth middleware
     const user_id = req.user.id;
 
     // Validation
@@ -390,7 +386,7 @@ router.post("/lost", authenticateToken, upload.array("images", 3), async (req, r
 
     const lostItemId = result.insertId;
 
-    // ✅ Save images if uploaded
+    // Save images if uploaded
     if (req.files && req.files.length > 0) {
 
       const imageQuery = `
@@ -399,10 +395,10 @@ router.post("/lost", authenticateToken, upload.array("images", 3), async (req, r
       `;
 
       for (const file of req.files) {
-await db.execute(imageQuery, [
-  lostItemId,
-  `/uploads/found_items/${file.filename}`
-]);
+      await db.execute(imageQuery, [
+        lostItemId,
+        `/uploads/found_items/${file.filename}`
+      ]);
       }
     }
 

@@ -156,7 +156,6 @@ router.post("/items/:id/:action", authenticateToken, async (req, res) => {
   try {
     const { id, action } = req.params;
 
-    // Determine item table and image folder
     let table = "FOUND_ITEMS";
     let imageTable = "FOUND_ITEM_IMAGES";
     let imageColumn = "found_item_id";
@@ -197,10 +196,10 @@ router.post("/items/:id/:action", authenticateToken, async (req, res) => {
         );
       }
     } else if (action === "delete") {
-      // 1️⃣ Get all associated images
+      // Get all associated images
       const [images] = await db.query(`SELECT image_path FROM ${imageTable} WHERE ${imageColumn}=?`, [id]);
 
-      // 2️⃣ Delete image files safely
+      // Delete image files safely
       for (const img of images) {
         if (img.image_path) {
           const imgPath = path.join(__dirname, "uploads", imageFolder, path.basename(img.image_path));
@@ -215,10 +214,10 @@ router.post("/items/:id/:action", authenticateToken, async (req, res) => {
         }
       }
 
-      // 3️⃣ Delete image records from DB
+      // Delete image records from DB
       await db.query(`DELETE FROM ${imageTable} WHERE ${imageColumn}=?`, [id]);
 
-      // 4️⃣ Delete the main item
+      // Delete the main item
       await db.query(`DELETE FROM ${table} WHERE id=?`, [id]);
     }
 
@@ -235,7 +234,6 @@ router.post("/items/:id/claimed", authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { claimed_by, claim_datetime } = req.body;
 
-    // First, determine the table and current status
     let table = null;
     let itemType = null;
 
@@ -283,9 +281,10 @@ router.post("/items/:id/claimed", authenticateToken, async (req, res) => {
 
 });
 
+// Get current user info (for header display)
 router.get("/me", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id; // assuming authenticateToken sets req.user
+    const userId = req.user.id;
     const [[user]] = await db.query("SELECT id, name, user_name, user_type FROM USERS WHERE id=?", [userId]);
 
     if (!user) return res.status(404).json({ message: "User not found" });

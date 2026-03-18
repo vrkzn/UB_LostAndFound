@@ -25,7 +25,6 @@ export default function FoundItemPage() {
   // --------------------------------------------------
   // File Validation
   // --------------------------------------------------
-
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
 
@@ -49,65 +48,62 @@ export default function FoundItemPage() {
 
   // --------------------------------------------------
   // Submit Handler
-  // --------------------------------------------------
+  // -------------------------------------------------
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-    // ✅ Image required validation
-    if (!files.length) {
-      setError("Please upload at least one image.");
+      if (!files.length) {
+        setError("Please upload at least one image.");
+        return;
+      }
+    if (files.length > 3) {
+      setError("You can upload a maximum of 3 images.");
       return;
     }
-  // Image validation (only if images exist)
-  if (files.length > 3) {
-    setError("You can upload a maximum of 3 images.");
-    return;
-  }
 
-  try {
-    setLoading(true);
-    setError("");
+    try {
+      setLoading(true);
+      setError("");
 
-    const formData = new FormData();
+      const formData = new FormData();
 
-    files.forEach(file => {
-      formData.append("images", file);
-    });
+      files.forEach(file => {
+        formData.append("images", file);
+      });
 
-    formData.append("item_name", itemName);
-    formData.append("category", category);
-    formData.append("date_found", dateFound);
-    formData.append("location_found", locationFound);
-    formData.append("time_found", timeFound);
-    formData.append("claim_to", claimTo);
-    formData.append("description", description);
+      formData.append("item_name", itemName);
+      formData.append("category", category);
+      formData.append("date_found", dateFound);
+      formData.append("location_found", locationFound);
+      formData.append("time_found", timeFound);
+      formData.append("claim_to", claimTo);
+      formData.append("description", description);
 
-    // Optional fields
-    if (notes) formData.append("notes", notes);
-    formData.append("isAnonymous", anonymous);
+      // Optional fields
+      if (notes) formData.append("notes", notes);
+      formData.append("isAnonymous", anonymous);
 
-    const res = await api.post("/items/found", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
-      }
-    });
+      const res = await api.post("/items/found", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
 
-    alert(res.data.message || "Found item reported successfully!");
-    navigate("/dashboard");
+      alert(res.data.message || "Found item reported successfully!");
+      navigate("/dashboard");
 
-  } catch (err) {
-    console.error(err);
+    } catch (err) {
+      console.error(err);
 
-    setError(
-      err.response?.data?.message ||
-      "Error submitting found item report"
-    );
+      setError(
+        err.response?.data?.message ||
+        "Error submitting found item report"
+      );
 
-  } finally {
-    setLoading(false);
-  }
-};
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --------------------------------------------------
   // Render
@@ -325,26 +321,23 @@ const handleSubmit = async (e) => {
 
           </div>
 
-{/* Submit */}
-<div className="md:col-span-2 space-y-2">
+          {/* Submit */}
+          <div className="md:col-span-2 space-y-2">
 
-  <button
-    type="submit"
-    disabled={loading}
-    className="w-full bg-[#5B0000] hover:bg-[#7A0000] text-white p-3 rounded-xl shadow-md transition disabled:opacity-60"
-  >
-    {loading ? "Submitting..." : "Submit Found Item Report"}
-  </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#5B0000] hover:bg-[#7A0000] text-white p-3 rounded-xl shadow-md transition disabled:opacity-60"
+            >
+              {loading ? "Submitting..." : "Submit Found Item Report"}
+            </button>
 
-  {/* Error text — clean, borderless */}
-  {error && (
-    <p className="text-red-600 text-sm ">
-      {error}
-    </p>
-  )}
-
-</div>
-
+            {error && (
+              <p className="text-red-600 text-sm ">
+                {error}
+              </p>
+            )}
+          </div>
         </div>
       </form>
     </div>

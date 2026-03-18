@@ -16,61 +16,60 @@ export default function Login() {
     general: ""
   });
 
-const handleLogin = async (e) => {
-  e.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-  try {
-    const response = await fetch(
-      "http://localhost:7002/api/auth/login",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
+    try {
+      const response = await fetch(
+        "http://localhost:7002/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, password })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors(prev => ({
+          ...prev,
+          general: data.message || "Login failed."
+        }));
+        return;
       }
-    );
 
-    const data = await response.json();
+      // Store auth data
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("role", data.user.user_type);
 
-    if (!response.ok) {
+      // Redirect based on role
+      const role = data.user.user_type;
+
+      if (role === "admin") {
+        navigate("/admindashboard");
+      } 
+      else if (role === "student") {
+        navigate("/dashboard");
+      } 
+      else {
+        navigate("/");
+      }
+
+    } catch (error) {
       setErrors(prev => ({
         ...prev,
-        general: data.message || "Login failed."
+        general: "Server is unreachable. Please try again."
       }));
-      return;
     }
-
-    // Store auth data
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
-    localStorage.setItem("role", data.user.user_type);
-
-    // Redirect based on role
-    const role = data.user.user_type;
-
-    if (role === "admin") {
-      navigate("/admindashboard");
-    } 
-    else if (role === "student") {
-      navigate("/dashboard");
-    } 
-    else {
-      navigate("/");
-    }
-
-  } catch (error) {
-    setErrors(prev => ({
-      ...prev,
-      general: "Server is unreachable. Please try again."
-    }));
-  }
-};
+  };
 
   return (
     <div className="min-h-screen flex">
 
-      {/* LEFT HERO SECTION */}
       <div
         className="hidden md:flex w-1/2 items-center justify-center"
         style={{
@@ -80,15 +79,13 @@ const handleLogin = async (e) => {
         <img src={logo} alt="UB Logo" className="w-72 opacity-95"/>
       </div>
 
-      {/* RIGHT LOGIN SECTION */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-[#FAF8F5] px-16">
 
         <div className="w-full max-w-md">
 
-          {/* SYSTEM TITLE (CENTERED) */}
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-[#5B0000]">
-              UB SIHTM
+              University of Baguio
             </h1>
 
             <p className="text-sm text-[#8A6B3F] font-medium">
@@ -96,11 +93,11 @@ const handleLogin = async (e) => {
             </p>
           </div>
 
-          {/* LEFT ALIGNED WELCOME TEXT */}
           <div className="mb-6">
             <h2 className="text-4xl font-semibold text-[#3A0000] text-left">
-              Welcome Back
+              Welcome!
             </h2>
+            
 
             <p className="text-sm text-gray-600 text-left">
               Please login to continue
@@ -109,7 +106,6 @@ const handleLogin = async (e) => {
 
           <form className="space-y-6" onSubmit={handleLogin}>
 
-            {/* EMAIL */}
             <div>
               <label className="block text-sm text-gray-700 mb-2 font-medium">
                 Email Address
@@ -198,7 +194,6 @@ const handleLogin = async (e) => {
               </button> */}
 
             </div>
-
           </form>
         </div>
       </div>
