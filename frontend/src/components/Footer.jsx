@@ -44,7 +44,6 @@ export default function Footer() {
 
           <div className="space-y-4 mt-4">
             <ContactItem label="Primary Contact" value="09060779655" copyToClipboard={copyToClipboard} />
-            <div className="text-center text-gray-400 text-xs">📍 Uniq</div>
             <ContactItem label="Alternate Contact" value="09395659903" copyToClipboard={copyToClipboard} />
           </div>
         </Modal>
